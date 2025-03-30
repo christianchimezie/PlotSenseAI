@@ -1,0 +1,34 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# Generate date range
+start_date = datetime(2023, 1, 1)
+end_date = datetime(2024, 3, 1)
+date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+
+# Product categories and regions
+categories = ['Electronics', 'Clothing', 'Groceries', 'Furniture', 'Toys']
+regions = ['North', 'South', 'East', 'West']
+
+# Generate synthetic sales data
+num_rows = len(date_range) * len(categories) * len(regions)
+data = []
+
+for date in date_range:
+    for category in categories:
+        for region in regions:
+            sales_volume = np.random.randint(10, 200)  # Random sales volume
+            revenue = sales_volume * np.random.uniform(5, 50)  # Random revenue per sale
+            data.append([date, category, region, sales_volume, round(revenue, 2)])
+
+# Create DataFrame
+df = pd.DataFrame(data, columns=['Date', 'Category', 'Region', 'Sales_Volume', 'Revenue'])
+
+# Save to CSV
+df.to_csv('test/synthetic_sales_data.csv', index=False)
+
+print("Synthetic sales dataset created and saved as 'test/synthetic_sales_data.csv'")
