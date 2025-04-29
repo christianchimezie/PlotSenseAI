@@ -48,7 +48,7 @@ pip install plotsense
 
 ```bash
 import plotsense as ps
-from plotsense import recommend_visualizations, generate_plot, refine_plot_explanation, 
+from plotsense import recommender, generate_plot, explainer, 
 ```
 ### 🔐 Authenticate with Groq API:
 Get your free API key from Groq Cloud https://console.groq.com/home
@@ -74,15 +74,17 @@ import pandas as pd
 df = pd.read_csv("data.csv")
 
 # Get AI-recommended visualizations
-suggestions = ps.recommend_visualizations(df)
+suggestions = ps.recommender(df) # default number of suggestions is 5
 print(suggestions)
 ```
 ### 📊 Sample Output:
+
+![alt text](image.png)
+
+🎛️ Want more suggestions?
+
 ``` bash
-        plot_type	    variables	          rationale	                                        ensemble_score
-0	    bar chart	    survived, pclass	    This visualization helps us understand the sur...	    1.0
-1	    bar chart	    survived, sex	        This visualization can reveal the difference i...	    0.6
-2	    histogram	    age	                    This histogram provides a detailed view of the...	    0.5
+suggestions = ps.recommender(df, n=10)  
 ```
 
 ### 📈 2. One-Click Plot Generation
@@ -103,7 +105,7 @@ plot1 = ps.generate_plot(df, suggestions[0], x='pclass', y='survived')
 Turn your visualizations into stories with natural language insights:
 
 ``` bash
-explanation = ps.refine_plot_explanation(plot1)
+explanation = ps.explainer(plot1)
 
 print(explanation)
 ```
@@ -122,17 +124,12 @@ explanation = refine_plot_explanation(
 ```bash  
 explanation = refine_plot_explanation(fig, iterations=3)  # Default is 2
 ```
-- Using Different Models: The package automatically selects the best available model, but you can specify models:
-
-``` bash
-explanation = refine_plot_explanation(fig, model_rotation=['llama-3.2-90b-vision-preview'])  # Use only this model
-``` 
 
 ## 🔄 Combined Workflow: Suggest → Plot → Explain
 ``` bash
-suggestions = ps.recommend_visualizations(df)
+suggestions = ps.recommender(df)
 plot = ps.generate_plot(df, suggestions[0])
-insight = ps.refine_plot_explanation(plot)
+insight = ps.explainer(plot)
 ```
 
 ## 🤝 Contributing

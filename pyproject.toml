@@ -27,10 +27,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "matplotlib>=3.0",
+    "matplotlib>=3.8.0",
     "seaborn>=0.11",
     "pandas>=1.0",
     "numpy>=1.18",
+    "pytest",
+    "python-dotenv",
+    "groq",
+    "requests",
+    "pytest-cov",
+    "pytest-mock",
+    "jupyter"
 ]
 
 [project.urls]

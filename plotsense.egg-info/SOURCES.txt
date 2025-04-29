@@ -9,13 +9,9 @@ plotsense.egg-info/requires.txt
 plotsense.egg-info/top_level.txt
 plotsense/explanations/__init__.py
 plotsense/explanations/explanations.py
-plotsense/explanations/explanationsv2.py
-plotsense/explanations/test_explainer.py
-plotsense/explanations/test_explainer2.py
 plotsense/plot_generator/__init__.py
 plotsense/plot_generator/altoplot.py
-plotsense/visual_suggestion/Visual_suggestion.py
-plotsense/visual_suggestion/Visual_suggestion_v2.py
-plotsense/visual_suggestion/Visual_suggestion_v3.py
 plotsense/visual_suggestion/__init__.py
-test/test_altoplot.py
+plotsense/visual_suggestion/suggestions.py
+test/test_explanations.py
+test/test_suggestions.py
