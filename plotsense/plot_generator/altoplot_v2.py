@@ -62,20 +62,21 @@ def generate_plot(df, suggestion_series, **kwargs):
     returns plt.figure
     """
 
-    PLOT_TYPE_MAP = {
-    "scatter plot": "scatter",
-    "line plot": "plot",
-    "bar chart": "bar",
-    "bar plot": "bar",
-    "histogram": "hist",
-    "box plot": "boxplot",
-    "pie chart": "pie",
-    "area chart": "fill_between",
-    # Add more mappings as needed
-    }
+    # PLOT_TYPE_MAP = {
+    # "scatter plot": "scatter",
+    # "line plot": "plot",
+    # "bar chart": "bar",
+    # "bar plot": "bar",
+    # "histogram": "hist",
+    # "box plot": "boxplot",
+    # "pie chart": "pie",
+    # "area chart": "fill_between",
+    # # Add more mappings as needed
+    # }
 
-    raw_plot_type = suggestion_series['plot_type'].strip().lower()
-    suggested_plot = PLOT_TYPE_MAP.get(raw_plot_type)
+    # raw_plot_type = suggestion_series['plot_type'].strip().lower()
+    # suggested_plot = PLOT_TYPE_MAP.get(raw_plot_type)
+    suggested_plot = suggestion_series['plot_type']
 
     variables = [col.strip() for col in suggestion_series['variables'].split(',')]
     x_suggested = variables[0] if variables[0] else None
