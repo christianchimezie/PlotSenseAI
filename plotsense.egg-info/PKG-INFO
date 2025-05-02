@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: plotsense
+Version: 0.1.0
+Summary: An intelligent plotting package with suggestions and explanations
+Author-email: Christian Chimezie <chimeziechristiancc@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/christianchimezie/PlotSenseAI
+Project-URL: Documentation, https://github.com/christianchimezie/PlotSenseAI/blob/main/README.md
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Scientific/Engineering :: Visualization
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: matplotlib>=3.0
+Requires-Dist: seaborn>=0.11
+Requires-Dist: pandas>=1.0
+Requires-Dist: numpy>=1.18
+
 # 🌟 PlotSense: AI-Powered Data Visualization Assistant
 
 ## 📌 Overview
@@ -22,7 +48,7 @@ pip install plotsense
 
 ```bash
 import plotsense as ps
-from plotsense import recommender, generate_plot, explainer, 
+from plotsense import recommend_visualizations, generate_plot, refine_plot_explanation, 
 ```
 ### 🔐 Authenticate with Groq API:
 Get your free API key from Groq Cloud https://console.groq.com/home
@@ -48,17 +74,15 @@ import pandas as pd
 df = pd.read_csv("data.csv")
 
 # Get AI-recommended visualizations
-suggestions = ps.recommender(df) # default number of suggestions is 5
+suggestions = ps.recommend_visualizations(df)
 print(suggestions)
 ```
 ### 📊 Sample Output:
-
-![alt text](image.png)
-
-🎛️ Want more suggestions?
-
 ``` bash
-suggestions = ps.recommender(df, n=10)  
+        plot_type	    variables	          rationale	                                        ensemble_score
+0	    bar chart	    survived, pclass	    This visualization helps us understand the sur...	    1.0
+1	    bar chart	    survived, sex	        This visualization can reveal the difference i...	    0.6
+2	    histogram	    age	                    This histogram provides a detailed view of the...	    0.5
 ```
 
 ### 📈 2. One-Click Plot Generation
@@ -79,7 +103,7 @@ plot1 = ps.generate_plot(df, suggestions[0], x='pclass', y='survived')
 Turn your visualizations into stories with natural language insights:
 
 ``` bash
-explanation = ps.explainer(plot1)
+explanation = ps.refine_plot_explanation(plot1)
 
 print(explanation)
 ```
@@ -98,12 +122,17 @@ explanation = refine_plot_explanation(
 ```bash  
 explanation = refine_plot_explanation(fig, iterations=3)  # Default is 2
 ```
+- Using Different Models: The package automatically selects the best available model, but you can specify models:
+
+``` bash
+explanation = refine_plot_explanation(fig, model_rotation=['llama-3.2-90b-vision-preview'])  # Use only this model
+``` 
 
 ## 🔄 Combined Workflow: Suggest → Plot → Explain
 ``` bash
-suggestions = ps.recommender(df)
+suggestions = ps.recommend_visualizations(df)
 plot = ps.generate_plot(df, suggestions[0])
-insight = ps.explainer(plot)
+insight = ps.refine_plot_explanation(plot)
 ```
 
 ## 🤝 Contributing

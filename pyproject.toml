@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plotsense"
+version = "0.1.0"
+authors = [
+    {name = "Christian Chimezie", email = "chimeziechristiancc@gmail.com"},
+]
+description = "An intelligent plotting package with suggestions and explanations"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+dependencies = [
+    "matplotlib>=3.0",
+    "seaborn>=0.11",
+    "pandas>=1.0",
+    "numpy>=1.18",
+]
+
+[project.urls]
+Homepage = "https://github.com/christianchimezie/PlotSenseAI"
+Documentation = "https://github.com/christianchimezie/PlotSenseAI/blob/main/README.md"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Error processing model.*:UserWarning"
+]

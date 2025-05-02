@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+# This file is used to install the required packages for the project.
 seaborn
 matplotlib
 pandas
@@ -8,12 +8,9 @@ python-dotenv
 ipykernel
 groq
 requests
-python 3.13.1
-<<<<<<< HEAD
 setuptools
 jupyter
-=======
-=======
 matplotlib>=3.8.0
->>>>>>> aba9026 (Adding histogram plot and updating the requirement with matplotlib)
->>>>>>> 77469f2871b9e0fef393bfce9fd0373730c9e52b
+pytest-cov
+pytest-mock
+
