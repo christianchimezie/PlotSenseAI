@@ -81,134 +81,236 @@ class PlotGenerator:
     # ========== Basic Plot Functions ==========
     def _create_scatter(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
-        
-        ax.scatter(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Scatter: {variables[0]} vs {variables[1]}")
-        return fig
-    
-    def _create_line(self, variables: List[str], **kwargs) -> plt.Figure:
-        fig, ax = plt.subplots()
-        ax.plot(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Line: {variables[0]} vs {variables[1]}")
-        return fig
-    
-    def _create_bar(self, variables: List[str], **kwargs) -> plt.Figure:
-        fig, ax = plt.subplots()
-
         # Extract label-related kwargs if provided
         x_label = kwargs.pop('x_label', None)
         y_label = kwargs.pop('y_label', None)
         title = kwargs.pop('title', None)
+        
+        ax.scatter(self.data[variables[0]], self.data[variables[1]], **kwargs)
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Scatter: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
+        return fig
+    
+    def _create_line(self, variables: List[str], **kwargs) -> plt.Figure:
+        fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
+        ax.plot(self.data[variables[0]], self.data[variables[1]], **kwargs)
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Line: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
+        return fig
+    
+    def _create_bar(self, variables: List[str], **kwargs) -> plt.Figure:
+        fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        # Define font sizes
+        tick_fontsize = kwargs.pop('tick_fontsize', 12)
+        label_fontsize = kwargs.pop('label_fontsize', 14)
+        title_fontsize = kwargs.pop('title_fontsize', 16)
             
         if len(variables) == 1:
             # Single variable - show value counts
             value_counts = self.data[variables[0]].value_counts()
             ax.bar(value_counts.index.astype(str), value_counts.values, **kwargs)
-            ax.set_xlabel(variables[0] if x_label is None else x_label)
-            ax.set_ylabel('Count' if y_label is None else y_label)
-            ax.set_title(f"Bar plot of {variables[0]}" if title is None else title)
-
-            # Rotate xticks if too many
+            ax.set_xlabel(variables[0] if x_label is None else x_label, fontsize=label_fontsize)
+            ax.set_ylabel('Count' if y_label is None else y_label, fontsize=label_fontsize)
+            ax.set_title(f"Bar plot of {variables[0]}" if title is None else title, fontsize=title_fontsize)
+            ax.tick_params(axis='x', labelsize=tick_fontsize)
+            ax.tick_params(axis='y', labelsize=tick_fontsize)
+            ax.grid(True, linestyle='--', alpha=0.7)
             if len(value_counts) > 10:
-                # Increase figure width and rotate xticks
                 fig.set_size_inches(max(12, len(value_counts) * 0.5), 8)
-                plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-                
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         else:
             # First variable is numeric, second is categorical
             grouped = self.data.groupby(variables[1])[variables[0]].mean()
             ax.bar(grouped.index.astype(str), grouped.values, **kwargs)
-            ax.set_xlabel(variables[1] if x_label is None else x_label)
-            ax.set_ylabel(f"Mean {variables[0]}" if y_label is None else y_label)
-            ax.set_title(f"Mean {variables[0]} by {variables[1]}" if title is None else title)
-
-            # Rotate xticks if too many
+            ax.set_xlabel(variables[1] if x_label is None else x_label, fontsize=label_fontsize)
+            ax.set_ylabel(f"Mean {variables[0]}" if y_label is None else y_label, fontsize=label_fontsize)
+            ax.set_title(f"Mean {variables[0]} by {variables[1]}" if title is None else title, fontsize=title_fontsize)
+            ax.tick_params(axis='x', labelsize=tick_fontsize)
+            ax.tick_params(axis='y', labelsize=tick_fontsize)
+            ax.grid(True, linestyle='--', alpha=0.7)
             if len(grouped) > 10:
-                # Increase figure width and rotate xticks
                 fig.set_size_inches(max(12, len(grouped) * 0.5), 8)
-                plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-            
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
-    
+        
     def _create_barh(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
         
         if len(variables) == 1:
-            # Single variable - show value counts
+            # Single variable - show value_counts
             value_counts = self.data[variables[0]].value_counts()
             ax.barh(value_counts.index.astype(str), value_counts.values, **kwargs)
-            ax.set_ylabel(variables[0])
-            ax.set_xlabel('Count')
+            ax.set_ylabel(variables[0] if y_label is None else y_label)
+            ax.set_xlabel('Count' if x_label is None else x_label)
+            unique_y = value_counts.index
+            if len(unique_y) > 10:
+                fig.set_size_inches(12, max(8, len(unique_y) * 0.5))
+                plt.setp(ax.get_yticklabels(), rotation=0, ha='right')
         else:
             # First variable is numeric, second is categorical
             grouped = self.data.groupby(variables[1])[variables[0]].value_counts()
-            ax.barh(grouped.index.astype(str), grouped.values, **kwargs)
-            ax.set_ylabel(variables[1])
-            ax.set_xlabel(f"Mean {variables[0]}")
+            # Convert MultiIndex to string by joining levels
+            labels = [','.join(map(str, idx)) for idx in grouped.index]
+            ax.barh(labels, grouped.values, **kwargs)
+            ax.set_ylabel(variables[1] if y_label is None else y_label)
+            ax.set_xlabel(f"Mean {variables[0]}" if x_label is None else x_label)
+            if len(labels) > 10:
+                fig.set_size_inches(12, max(8, len(labels) * 0.5))
+                plt.setp(ax.get_yticklabels(), rotation=0, ha='right')
             
         ax.set_title(f"Horizontal bar plot: {variables[0]}" + 
-                    (f" by {variables[1]}" if len(variables) > 1 else ""))
+                    (f" by {variables[1]}" if len(variables) > 1 else "") if title is None else title)
         return fig
     
     def _create_stem(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.stem(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Stem: {variables[0]} vs {variables[1]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Stem: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_step(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.step(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Step: {variables[0]} vs {variables[1]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Step: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_fill_between(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) < 3:
             raise ValueError("fill_between requires at least 3 variables (x, y1, y2)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.fill_between(self.data[variables[0]], 
                        self.data[variables[1]], 
                        self.data[variables[2]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Fill Between: {variables[1]} and {variables[2]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Fill Between: {variables[1]} and {variables[2]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     # ========== Statistical Plot Functions ==========
     def _create_hist(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.hist(self.data[variables[0]], **kwargs)
-        ax.set_xlabel(variables[0])
-        ax.set_ylabel('Frequency')
-        ax.set_title(f"Histogram of {variables[0]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel('Frequency' if y_label is None else y_label)
+        ax.set_title(f"Histogram of {variables[0]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_box(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.boxplot(self.data[variables[0]], **kwargs)
-        ax.set_ylabel(variables[0])
-        ax.set_title(f"Box plot of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(variables[0] if y_label is None else y_label)
+        ax.set_title(f"Box plot of {variables[0]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_violin(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.violinplot(self.data[variables[0]], **kwargs)
-        ax.set_ylabel(variables[0])
-        ax.set_title(f"Violin plot of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(variables[0] if y_label is None else y_label)
+        ax.set_title(f"Violin plot of {variables[0]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_errorbar(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) < 3:
             raise ValueError("errorbar requires at least 3 variables (x, y, yerr)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.errorbar(self.data[variables[0]], 
                     self.data[variables[1]], 
                     yerr=self.data[variables[2]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Errorbar: {variables[0]} vs {variables[1]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Errorbar: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     # ========== 2D Plot Functions ==========
@@ -216,80 +318,153 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("imshow requires exactly 1 variable (2D array)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.imshow(self.data[variables[0]], **kwargs)
-        ax.set_title(f"Image show of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Image show of {variables[0]}" if title is None else title)
         return fig
     
     def _create_pcolor(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) != 1:
             raise ValueError("pcolor requires exactly 1 variable (2D array)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.pcolor(self.data[variables[0]], **kwargs)
-        ax.set_title(f"Pcolor of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Pcolor of {variables[0]}" if title is None else title)
         return fig
     
     def _create_pcolormesh(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) != 1:
             raise ValueError("pcolormesh requires exactly 1 variable (2D array)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.pcolormesh(self.data[variables[0]], **kwargs)
-        ax.set_title(f"Pcolormesh of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Pcolormesh of {variables[0]}" if title is None else title)
         return fig
     
     def _create_contour(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) != 1:
             raise ValueError("contour requires exactly 1 variable (2D array)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.contour(self.data[variables[0]], **kwargs)
-        ax.set_title(f"Contour plot of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Contour plot of {variables[0]}" if title is None else title)
         return fig
     
     def _create_contourf(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) != 1:
             raise ValueError("contourf requires exactly 1 variable (2D array)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.contourf(self.data[variables[0]], **kwargs)
-        ax.set_title(f"Filled contour plot of {variables[0]}")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Filled contour plot of {variables[0]}" if title is None else title)
         return fig
     
     # ========== Specialized Plot Functions ==========
     def _create_pie(self, variables: List[str], **kwargs) -> plt.Figure:
         value_counts = self.data[variables[0]].value_counts()
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        title = kwargs.pop('title', None)
+        
         ax.pie(value_counts, labels=value_counts.index, autopct='%1.1f%%', **kwargs)
-        ax.set_title(f"Pie chart of {variables[0]}")
+        ax.set_title(f"Pie chart of {variables[0]}" if title is None else title)
+        unique_labels = value_counts.index
+        if len(unique_labels) > 10:
+            fig.set_size_inches(max(12, len(unique_labels) * 0.5), 8)
         return fig
     
     def _create_polar(self, variables: List[str], **kwargs) -> plt.Figure:
         fig = plt.figure()
         ax = fig.add_subplot(111, polar=True)
+        # Extract label-related kwargs if provided
+        title = kwargs.pop('title', None)
+        
         ax.plot(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        ax.set_title(f"Polar plot: {variables[0]} vs {variables[1]}")
+        ax.set_title(f"Polar plot: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_hexbin(self, variables: List[str], **kwargs) -> plt.Figure:
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.hexbin(self.data[variables[0]], self.data[variables[1]], **kwargs)
-        self._set_labels(ax, variables)
-        ax.set_title(f"Hexbin: {variables[0]} vs {variables[1]}")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Hexbin: {variables[0]} vs {variables[1]}" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_quiver(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) < 4:
             raise ValueError("quiver requires at least 4 variables (x, y, u, v)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.quiver(self.data[variables[0]], 
                   self.data[variables[1]], 
                   self.data[variables[2]], 
                   self.data[variables[3]], **kwargs)
-        self._set_labels(ax, variables[:2])
-        ax.set_title(f"Quiver plot")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_title(f"Quiver plot" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_streamplot(self, variables: List[str], **kwargs) -> plt.Figure:
         if len(variables) < 4:
             raise ValueError("streamplot requires at least 4 variables (x, y, u, v)")
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
+        
         x = np.linspace(0, 1, len(self.data[variables[0]]))
         y = np.linspace(0, 1, len(self.data[variables[1]]))
         X, Y = np.meshgrid(x, y)
@@ -297,33 +472,68 @@ class PlotGenerator:
                      self.data[variables[2]].values.reshape(len(x), len(y)),
                      self.data[variables[3]].values.reshape(len(x), len(y)),
                      **kwargs)
-        ax.set_title(f"Stream plot")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_title(f"Stream plot" if title is None else title)
+        unique_x = x
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     # ========== 3D Plot Functions ==========
     def _create_plot3d(self, variables: List[str], **kwargs) -> plt.Figure:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        z_label = kwargs.pop('z_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.plot(self.data[variables[0]], 
                 self.data[variables[1]], 
                 self.data[variables[2]], **kwargs)
-        self._set_3d_labels(ax, variables)
-        ax.set_title(f"3D Line Plot")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_zlabel(variables[2] if z_label is None else z_label)
+        ax.set_title(f"3D Line Plot" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_scatter3d(self, variables: List[str], **kwargs) -> plt.Figure:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        z_label = kwargs.pop('z_label', None)
+        title = kwargs.pop('title', None)
+        
         ax.scatter(self.data[variables[0]], 
                    self.data[variables[1]], 
                    self.data[variables[2]], **kwargs)
-        self._set_3d_labels(ax, variables)
-        ax.set_title(f"3D Scatter Plot")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_zlabel(variables[2] if z_label is None else z_label)
+        ax.set_title(f"3D Scatter Plot" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_bar3d(self, variables: List[str], **kwargs) -> plt.Figure:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        z_label = kwargs.pop('z_label', None)
+        title = kwargs.pop('title', None)
         
         # For bar3d we need x, y, z positions and sizes
         if len(variables) < 6:
@@ -337,13 +547,24 @@ class PlotGenerator:
         dz = self.data[variables[5]]
         
         ax.bar3d(x, y, z, dx, dy, dz, **kwargs)
-        self._set_3d_labels(ax, variables[:3])
-        ax.set_title(f"3D Bar Plot")
+        ax.set_xlabel(variables[0] if x_label is None else x_label)
+        ax.set_ylabel(variables[1] if y_label is None else y_label)
+        ax.set_zlabel(variables[2] if z_label is None else z_label)
+        ax.set_title(f"3D Bar Plot" if title is None else title)
+        unique_x = self.data[variables[0]].dropna().unique()
+        if len(unique_x) > 10:
+            fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+            plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
     
     def _create_surface(self, variables: List[str], **kwargs) -> plt.Figure:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        z_label = kwargs.pop('z_label', None)
+        title = kwargs.pop('title', None)
         
         # For surface plot we need a grid of values
         if len(variables) != 1:
@@ -355,31 +576,43 @@ class PlotGenerator:
         X, Y = np.meshgrid(X, Y)
         
         ax.plot_surface(X, Y, Z, **kwargs)
-        ax.set_title(f"3D Surface Plot")
+        ax.set_xlabel(x_label if x_label is not None else '')
+        ax.set_ylabel(y_label if y_label is not None else '')
+        ax.set_zlabel(z_label if z_label is not None else '')
+        ax.set_title(f"3D Surface Plot" if title is None else title)
         return fig
     
     # ========== Helper Methods ==========
-    def _set_labels(self, ax, variables: List[str]):
+    def _set_labels(self, ax, variables: List[str], **kwargs):
         """Set labels for x and y axes based on variables."""
+        x_label = kwargs.get('x_label', None)
+        y_label = kwargs.get('y_label', None)
         if len(variables) > 0:
-            ax.set_xlabel(variables[0])
+            ax.set_xlabel(variables[0] if x_label is None else x_label)
         if len(variables) > 1:
-            ax.set_ylabel(variables[1])
+            ax.set_ylabel(variables[1] if y_label is None else y_label)
     
-    def _set_3d_labels(self, ax, variables: List[str]):
+    def _set_3d_labels(self, ax, variables: List[str], **kwargs):
         """Set labels for 3D plots."""
+        x_label = kwargs.get('x_label', None)
+        y_label = kwargs.get('y_label', None)
+        z_label = kwargs.get('z_label', None)
         if len(variables) > 0:
-            ax.set_xlabel(variables[0])
+            ax.set_xlabel(variables[0] if x_label is None else x_label)
         if len(variables) > 1:
-            ax.set_ylabel(variables[1])
+            ax.set_ylabel(variables[1] if y_label is None else y_label)
         if len(variables) > 2:
-            ax.set_zlabel(variables[2])
+            ax.set_zlabel(variables[2] if z_label is None else z_label)
 
 
 class SmartPlotGenerator(PlotGenerator):
     def _create_box(self, variables: List[str], **kwargs) -> plt.Figure:
         """Enhanced boxplot that handles both univariate and bivariate cases with NaN handling."""
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
         
         if len(variables) == 1:
             # Univariate case - single numerical variable
@@ -387,8 +620,13 @@ class SmartPlotGenerator(PlotGenerator):
             if len(data) == 0:
                 raise ValueError(f"No valid data remaining after dropping NaN values for {variables[0]}")
             ax.boxplot(data, **kwargs)
-            ax.set_ylabel(variables[0])
-            ax.set_title(f"Box plot of {variables[0]}")
+            ax.set_xlabel(x_label if x_label is not None else '')
+            ax.set_ylabel(variables[0] if y_label is None else y_label)
+            ax.set_title(f"Box plot of {variables[0]}" if title is None else title)
+            unique_x = data.unique()
+            if len(unique_x) > 10:
+                fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         elif len(variables) >= 2:
             # Bivariate case - numerical vs categorical
             numerical_var = variables[0]
@@ -410,17 +648,21 @@ class SmartPlotGenerator(PlotGenerator):
                 
             ax.boxplot(grouped_data, **kwargs)
             ax.set_xticklabels(clean_data[categorical_var].unique())
-            ax.set_xlabel(categorical_var)
-            ax.set_ylabel(numerical_var)
-            ax.set_title(f"Box plot of {numerical_var} by {categorical_var}")
-        else:
-            raise ValueError("Box plot requires at least 1 variable")
-            
+            ax.set_xlabel(categorical_var if x_label is None else x_label)
+            ax.set_ylabel(numerical_var if y_label is None else y_label)
+            ax.set_title(f"Box plot of {numerical_var} by {categorical_var}" if title is None else title)
+            if len(clean_data[categorical_var].unique()) > 10:
+                fig.set_size_inches(max(12, len(clean_data[categorical_var].unique()) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
 
     def _create_violin(self, variables: List[str], **kwargs) -> plt.Figure:
         """Enhanced violin plot that handles both univariate and bivariate cases with NaN handling."""
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
         
         if len(variables) == 1:
             # Univariate case - single numerical variable
@@ -428,8 +670,13 @@ class SmartPlotGenerator(PlotGenerator):
             if len(data) == 0:
                 raise ValueError(f"No valid data remaining after dropping NaN values for {variables[0]}")
             ax.violinplot(data, **kwargs)
-            ax.set_ylabel(variables[0])
-            ax.set_title(f"Violin plot of {variables[0]}")
+            ax.set_xlabel(x_label if x_label is not None else '')
+            ax.set_ylabel(variables[0] if y_label is None else y_label)
+            ax.set_title(f"Violin plot of {variables[0]}" if title is None else title)
+            unique_x = data.unique()
+            if len(unique_x) > 10:
+                fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         elif len(variables) >= 2:
             # Bivariate case - numerical vs categorical
             numerical_var = variables[0]
@@ -452,17 +699,21 @@ class SmartPlotGenerator(PlotGenerator):
             ax.violinplot(grouped_data, **kwargs)
             ax.set_xticks(np.arange(1, len(grouped_data)+1))
             ax.set_xticklabels(clean_data[categorical_var].unique())
-            ax.set_xlabel(categorical_var)
-            ax.set_ylabel(numerical_var)
-            ax.set_title(f"Violin plot of {numerical_var} by {categorical_var}")
-        else:
-            raise ValueError("Violin plot requires at least 1 variable")
-            
+            ax.set_xlabel(categorical_var if x_label is None else x_label)
+            ax.set_ylabel(numerical_var if y_label is None else y_label)
+            ax.set_title(f"Violin plot of {numerical_var} by {categorical_var}" if title is None else title)
+            if len(clean_data[categorical_var].unique()) > 10:
+                fig.set_size_inches(max(12, len(clean_data[categorical_var].unique()) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
 
     def _create_hist(self, variables: List[str], **kwargs) -> plt.Figure:
         """Enhanced histogram that can handle grouping by a second variable."""
         fig, ax = plt.subplots()
+        # Extract label-related kwargs if provided
+        x_label = kwargs.pop('x_label', None)
+        y_label = kwargs.pop('y_label', None)
+        title = kwargs.pop('title', None)
         
         if len(variables) == 1:
             # Simple histogram
@@ -471,9 +722,13 @@ class SmartPlotGenerator(PlotGenerator):
                 raise ValueError(f"No valid data remaining for {variables[0]}")
                 
             ax.hist(data, **kwargs)
-            ax.set_xlabel(variables[0])
-            ax.set_ylabel('Frequency')
-            ax.set_title(f"Histogram of {variables[0]}")
+            ax.set_xlabel(variables[0] if x_label is None else x_label)
+            ax.set_ylabel('Frequency' if y_label is None else y_label)
+            ax.set_title(f"Histogram of {variables[0]}" if title is None else title)
+            unique_x = data.unique()
+            if len(unique_x) > 10:
+                fig.set_size_inches(max(12, len(unique_x) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         elif len(variables) >= 2:
             # Grouped histogram
             numerical_var = variables[0]
@@ -501,13 +756,13 @@ class SmartPlotGenerator(PlotGenerator):
                        color=colors[i % len(colors)],
                        **kwargs)
                 
-            ax.set_xlabel(numerical_var)
-            ax.set_ylabel('Frequency')
-            ax.set_title(f"Histogram of {numerical_var} by {categorical_var}")
+            ax.set_xlabel(numerical_var if x_label is None else x_label)
+            ax.set_ylabel('Frequency' if y_label is None else y_label)
+            ax.set_title(f"Histogram of {numerical_var} by {categorical_var}" if title is None else title)
             ax.legend()
-        else:
-            raise ValueError("Histogram requires at least 1 variable")
-            
+            if len(categories) > 10:
+                fig.set_size_inches(max(12, len(categories) * 0.5), 8)
+                plt.setp(ax.get_xticklabels(), rotation=90, ha='center')
         return fig
 
    
@@ -607,7 +862,7 @@ def plotgen(
         suggestions_df.iloc[suggestion] = updated_suggestion
         _plot_generator_instance.suggestions = suggestions_df
         
-       # Generate the plot
+        # Generate the plot
         return _plot_generator_instance.generate_plot(suggestion, **plot_kwargs)
         
     else:
