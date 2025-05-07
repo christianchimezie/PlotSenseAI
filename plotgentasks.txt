@@ -1,5 +1,5 @@
 update functions in plotgen to have the following
-
+ 
 - ensure that users have the ability to specify their labels.
 # Extract label-related kwargs if provided
     x_label = kwargs.pop('x_label', None)

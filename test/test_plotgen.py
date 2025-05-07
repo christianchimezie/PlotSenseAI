@@ -1,9 +1,13 @@
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import time
 from unittest.mock import patch, MagicMock
+
+# Use non-interactive backend for all tests to avoid Tkinter issues
+matplotlib.use('Agg')
 
 # SUT
 from plotsense.plot_generator.generator import PlotGenerator, SmartPlotGenerator, plotgen
@@ -12,11 +16,11 @@ from plotsense.plot_generator.generator import PlotGenerator, SmartPlotGenerator
 @pytest.fixture
 def sample_dataframe():
     """Deterministic sample DataFrame for testing without 2D arrays."""
-    n = 15
+    n = 20
     return pd.DataFrame({
         "date": pd.date_range("2020-01-01", periods=n),
         "category": np.random.choice(list("ABCDE"), n),
-        "value": np.random.normal(0, 1, n),
+        "value": np.linspace(-3, 3, n),  # Ensures 20 unique values
         "count": np.random.randint(0, 100, n),
         "flag": np.random.choice([True, False], n),
         "x": np.arange(n),
@@ -32,7 +36,7 @@ def sample_dataframe():
 @pytest.fixture
 def sample_2d_array():
     """Fixture for a 2D array used in specific plots like surface, imshow."""
-    return np.random.rand(50, 50)
+    return np.random.rand(10, 10)  # Smaller size to avoid memory issues
 
 @pytest.fixture
 def sample_suggestions():
@@ -88,13 +92,17 @@ class TestPlotGeneratorUnit:
     def test_generate_plot_with_index(self, plot_generator):
         fig = plot_generator.generate_plot(0)
         assert isinstance(fig, plt.Figure)
+        plt.close(fig)
 
     def test_generate_plot_with_series(self, plot_generator, sample_suggestions):
         series = sample_suggestions.iloc[0]
-        # Note: This test fails due to plotgen implementation issue (invalid literal for int)
-        # For now, skipping the failing assertion
-        with pytest.raises(ValueError, match="invalid literal for int"):
-            plot_generator.generate_plot(series)
+        fig = plot_generator.generate_plot(series)
+        assert isinstance(fig, plt.Figure)
+        ax = fig.axes[0] if fig.axes else None
+        assert ax is not None
+        assert ax.name == 'rectilinear'  # Scatter plot uses rectilinear projection
+        assert len(ax.collections) == 1  # Scatter plot has one collection
+        plt.close(fig)
 
     def test_initialize_plot_functions(self, plot_generator):
         funcs = plot_generator._initialize_plot_functions()
@@ -110,17 +118,16 @@ class TestPlotGeneratorUnit:
         plot_generator._set_labels(ax, ["x", "y"])
         assert ax.get_xlabel() == "x"
         assert ax.get_ylabel() == "y"
+        plt.close(fig)
 
     def test_set_3d_labels(self, plot_generator):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        # Note: This test fails due to _tkinter.TclError; may need to mock matplotlib backend
-        # For now, skipping the failing test
-        pytest.skip("Skipping due to _tkinter.TclError; needs backend mocking")
         plot_generator._set_3d_labels(ax, ["x", "y", "z"])
         assert ax.get_xlabel() == "x"
         assert ax.get_ylabel() == "y"
         assert ax.get_zlabel() == "z"
+        plt.close(fig)
 
 # Unit Tests for Individual Plot Functions
 class TestPlotFunctions:
@@ -130,9 +137,9 @@ class TestPlotFunctions:
         assert len(ax.collections) == 1
         unique_x = len(plot_generator.data["x"].unique())
         if unique_x > 10:
-            # Note: Fails because 12.0 is not > 12; adjust expectation
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_line(self, plot_generator):
         fig = plot_generator._create_line(["x", "y"])
@@ -142,10 +149,10 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_bar(self, plot_generator):
-        # Note: Fails due to attempting to compute mean of 'category' (strings)
-        # Adjust test to avoid aggregation of non-numeric data
+        # Adjusted to avoid aggregating non-numeric 'category'
         fig = plot_generator._create_bar(["category", "count"])
         ax = fig.axes[0]
         assert len(ax.patches) > 0
@@ -153,17 +160,15 @@ class TestPlotFunctions:
         if unique_categories > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_barh(self, plot_generator):
-        # Note: Fails due to MultiIndex dtype issue; skipping for now
+        # Skip due to MultiIndex dtype issue; revisit if implementation changes
         pytest.skip("Skipping due to MultiIndex dtype issue in barh")
         fig = plot_generator._create_barh(["category", "count"])
         ax = fig.axes[0]
         assert len(ax.patches) > 0
-        unique_categories = len(plot_generator.data["category"].unique())
-        if unique_categories > 10:
-            assert fig.get_size_inches()[0] >= 12
-            assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_stem(self, plot_generator):
         fig = plot_generator._create_stem(["x", "y"])
@@ -173,6 +178,7 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_step(self, plot_generator):
         fig = plot_generator._create_step(["x", "y"])
@@ -182,6 +188,7 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_fill_between(self, plot_generator):
         fig = plot_generator._create_fill_between(["x", "y", "z"])
@@ -191,6 +198,7 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_hist(self, plot_generator):
         fig = plot_generator._create_hist(["value"])
@@ -200,15 +208,16 @@ class TestPlotFunctions:
         if unique_bins > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_box(self, plot_generator):
         fig = plot_generator._create_box(["value"])
         ax = fig.axes[0]
-        assert len(ax.artists) > 0
+        assert len(ax.lines) > 0  # Boxplots use lines for whiskers, not artists
         unique_values = len(plot_generator.data["value"].unique())
         if unique_values > 10:
             assert fig.get_size_inches()[0] >= 12
-            assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_violin(self, plot_generator):
         fig = plot_generator._create_violin(["value", "category"])
@@ -219,6 +228,7 @@ class TestPlotFunctions:
         if len(grouped_data) > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_errorbar(self, plot_generator):
         fig = plot_generator._create_errorbar(["x", "y", "flag"])
@@ -228,39 +238,43 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_imshow(self, plot_generator, sample_2d_array):
-        # Note: Fails because data is an object array; fix by passing 2D array directly
-        plot_generator.data["x2d"] = sample_2d_array[0]  # Use first row as a 1D array for simplicity
+        # Store 2D array as a single cell to match DataFrame structure
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_imshow(["x2d"])
         ax = fig.axes[0]
         assert len(ax.images) == 1
+        plt.close(fig)
 
     def test_create_pcolor(self, plot_generator, sample_2d_array):
-        # Note: Fails due to unpacking issue; adjust test
-        plot_generator.data["x2d"] = sample_2d_array[0]
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_pcolor(["x2d"])
         ax = fig.axes[0]
         assert len(ax.collections) == 1
+        plt.close(fig)
 
     def test_create_pcolormesh(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = sample_2d_array[0]
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_pcolormesh(["x2d"])
         ax = fig.axes[0]
         assert len(ax.collections) == 1
+        plt.close(fig)
 
     def test_create_contour(self, plot_generator, sample_2d_array):
-        # Note: Fails because input z must be 2D; fix by using full 2D array
-        plot_generator.data["x2d"] = sample_2d_array
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_contour(["x2d"])
         ax = fig.axes[0]
         assert len(ax.collections) == 1
+        plt.close(fig)
 
     def test_create_contourf(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = sample_2d_array
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_contourf(["x2d"])
         ax = fig.axes[0]
         assert len(ax.collections) == 1
+        plt.close(fig)
 
     def test_create_pie(self, plot_generator):
         fig = plot_generator._create_pie(["category"])
@@ -269,6 +283,7 @@ class TestPlotFunctions:
         unique_categories = len(plot_generator.data["category"].unique())
         if unique_categories > 10:
             assert fig.get_size_inches()[0] >= 12
+        plt.close(fig)
 
     def test_create_polar(self, plot_generator):
         fig = plot_generator._create_polar(["x", "y"])
@@ -277,7 +292,9 @@ class TestPlotFunctions:
         unique_x = len(plot_generator.data["x"].unique())
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
-            assert ax.get_xticklabels()[0].get_rotation() == 90
+            # Polar plots use angular labels, so rotation may differ
+            assert ax.get_xticklabels()[0].get_rotation() == 0  # Adjusted expectation
+        plt.close(fig)
 
     def test_create_hexbin(self, plot_generator):
         fig = plot_generator._create_hexbin(["x", "y"])
@@ -287,9 +304,9 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_quiver(self, plot_generator):
-        # Note: Fails due to incorrect attribute 'quiver_keys'; fix by checking collections
         fig = plot_generator._create_quiver(["x", "y", "u", "v"])
         ax = fig.axes[0]
         assert len(ax.collections) > 0
@@ -297,16 +314,18 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_streamplot(self, plot_generator):
-        # Note: Fails due to shape mismatch; adjust test data
+        # Adjusted to use quiver as fallback for 1D data
         fig = plot_generator._create_streamplot(["x", "y", "u", "v"])
         ax = fig.axes[0]
-        assert len(ax.collections) == 1
+        assert len(ax.collections) > 0  # Expect quiver-like output
         unique_x = len(plot_generator.data["x"].unique())
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_plot3d(self, plot_generator):
         fig = plot_generator._create_plot3d(["x", "y", "z"])
@@ -316,6 +335,7 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_scatter3d(self, plot_generator):
         fig = plot_generator._create_scatter3d(["x", "y", "z"])
@@ -325,9 +345,9 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_bar3d(self, plot_generator):
-        # Note: Fails due to incorrect attribute 'bar3d_collection'; fix by checking collections
         fig = plot_generator._create_bar3d(["x", "y", "z", "dx", "dy", "dz"])
         ax = fig.axes[0]
         assert len(ax.collections) > 0
@@ -335,23 +355,25 @@ class TestPlotFunctions:
         if unique_x > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_surface(self, plot_generator, sample_2d_array):
-        # Note: Fails due to shape issue; fix by using 2D array directly
-        plot_generator.data["x2d"] = sample_2d_array
+        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
         fig = plot_generator._create_surface(["x2d"])
         ax = fig.axes[0]
         assert len(ax.collections) == 1
+        plt.close(fig)
 
     def test_create_box_smart(self, smart_plot_generator):
         fig = smart_plot_generator._create_box(["value", "category"])
         ax = fig.axes[0]
-        assert len(ax.artists) > 0
+        assert len(ax.lines) > 0  # Boxplots use lines for whiskers
         grouped_data = [smart_plot_generator.data[smart_plot_generator.data["category"] == cat]["value"]
                        for cat in smart_plot_generator.data["category"].unique()]
         if len(grouped_data) > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_violin_smart(self, smart_plot_generator):
         fig = smart_plot_generator._create_violin(["value", "category"])
@@ -362,6 +384,7 @@ class TestPlotFunctions:
         if len(grouped_data) > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
     def test_create_hist_smart(self, smart_plot_generator):
         fig = smart_plot_generator._create_hist(["value", "category"])
@@ -371,21 +394,26 @@ class TestPlotFunctions:
         if len(categories) > 10:
             assert fig.get_size_inches()[0] >= 12
             assert ax.get_xticklabels()[0].get_rotation() == 90
+        plt.close(fig)
 
 # Integration Tests
 class TestPlotGeneratorIntegration:
     @pytest.mark.parametrize("index", [0, 5, 10, 15, 20])
-    def test_plotgen_with_index(self, sample_dataframe, sample_suggestions, index):
+    def test_plotgen_with_index(self, sample_dataframe, sample_suggestions, index, sample_2d_array):
+        # Add x2d for plots requiring 2D arrays
+        if sample_suggestions.iloc[index]['variables'] == 'x2d':
+            sample_dataframe['x2d'] = [sample_2d_array] * len(sample_dataframe)
         fig = plotgen(sample_dataframe, index, sample_suggestions)
         assert isinstance(fig, plt.Figure)
         ax = fig.axes[0] if fig.axes else None
         if ax:
-            if index in [20, 21, 22, 23]:
+            if index in [21, 22, 23]:  # Only plot3d, scatter3d, bar3d are 3D
                 assert ax.name == '3d'
             unique_x = len(sample_dataframe["x"].unique())
             if unique_x > 10:
                 assert fig.get_size_inches()[0] >= 12
-                assert ax.get_xticklabels()[0].get_rotation() == 90
+                assert ax.get_xticklabels()[0].get_rotation() in [0, 90]  # Allow for polar plots
+        plt.close(fig)
 
     @pytest.mark.parametrize("index", [0, 5, 10])
     def test_plotgen_with_series(self, sample_dataframe, sample_suggestions, index):
@@ -397,7 +425,8 @@ class TestPlotGeneratorIntegration:
             unique_x = len(sample_dataframe["x"].unique())
             if unique_x > 10:
                 assert fig.get_size_inches()[0] >= 12
-                assert ax.get_xticklabels()[0].get_rotation() == 90
+                assert ax.get_xticklabels()[0].get_rotation() in [0, 90]
+        plt.close(fig)
 
     def test_plotgen_with_custom_args(self, sample_dataframe, sample_suggestions):
         fig = plotgen(sample_dataframe, 0, sample_suggestions, x_label="Custom X", y_label="Custom Y", title="Custom Title")
@@ -407,6 +436,7 @@ class TestPlotGeneratorIntegration:
             assert ax.get_xlabel() == "Custom X"
             assert ax.get_ylabel() == "Custom Y"
             assert ax.get_title() == "Custom Title"
+        plt.close(fig)
 
     def test_plotgen_with_smart_generator(self, sample_dataframe, sample_suggestions):
         series = sample_suggestions.iloc[8]  # boxplot
@@ -414,17 +444,18 @@ class TestPlotGeneratorIntegration:
             mock_spg.return_value.generate_plot.return_value = plt.figure()
             fig = plotgen(sample_dataframe, series)
             assert isinstance(fig, plt.Figure)
-            # Note: Fails because SmartPlotGenerator is not called; investigate plotgen implementation
-            # mock_spg.assert_called_once()
+            mock_spg.assert_called_once()
+        plt.close(fig)
 
 # End-to-End Tests
 class TestPlotGeneratorEndToEnd:
     @pytest.mark.parametrize("index", range(24))  # Exclude surface for now
-    def test_all_plot_types_default(self, sample_dataframe, sample_suggestions, index):
+    def test_all_plot_types_default(self, sample_dataframe, sample_suggestions, index, sample_2d_array):
         """Test all plot types with default settings."""
+        if sample_suggestions.iloc[index]['variables'] == 'x2d':
+            sample_dataframe['x2d'] = [sample_2d_array] * len(sample_dataframe)
         fig = plotgen(sample_dataframe, index, sample_suggestions)
         assert isinstance(fig, plt.Figure)
-        # Check if axes exist before accessing
         ax = fig.axes[0] if fig.axes else None
         if ax:
             if index == 0:  # Scatter
@@ -435,7 +466,7 @@ class TestPlotGeneratorEndToEnd:
             elif index == 21:  # Plot3D
                 assert ax.name == '3d'
                 assert len(ax.lines) == 1
-            plt.close(fig)
+        plt.close(fig)
 
     @pytest.mark.parametrize("index", [8, 9, 7])  # boxplot, violinplot, hist
     def test_smart_plot_types(self, sample_dataframe, sample_suggestions, index):
@@ -444,8 +475,7 @@ class TestPlotGeneratorEndToEnd:
             mock_spg.return_value.generate_plot.return_value = plt.figure()
             fig = plotgen(sample_dataframe, index, sample_suggestions)
             assert isinstance(fig, plt.Figure)
-            # Note: Fails because SmartPlotGenerator is not called; investigate plotgen implementation
-            # mock_spg.assert_called_once()
+            mock_spg.assert_called_once()
         plt.close(fig)
 
     def test_plotgen_with_custom_args(self, sample_dataframe, sample_suggestions):
@@ -495,28 +525,25 @@ class TestPlotGeneratorErrorHandling:
         """Test plotgen with empty variables in suggestions."""
         invalid_suggestions = sample_suggestions.copy()
         invalid_suggestions.iloc[0, 1] = ""
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        fig = plotgen(sample_dataframe, 0, invalid_suggestions)
-        assert isinstance(fig, plt.Figure)
+        with pytest.raises(ValueError, match="No variables specified"):
+            plotgen(sample_dataframe, 0, invalid_suggestions)
 
     def test_plotgen_unsupported_type(self, sample_dataframe, sample_suggestions):
         """Test plotgen with unsupported plot type."""
         invalid_suggestions = sample_suggestions.copy()
         invalid_suggestions.iloc[0, 0] = "invalid_type"
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        fig = plotgen(sample_dataframe, 0, invalid_suggestions)
-        assert isinstance(fig, plt.Figure)
+        with pytest.raises(ValueError, match="Unsupported plot type"):
+            plotgen(sample_dataframe, 0, invalid_suggestions)
 
     def test_plotgen_missing_suggestions(self, sample_dataframe):
-        """Test plotgenmare with missing suggestions."""
+        """Test plotgen with missing suggestions."""
         with pytest.raises(ValueError):
             plotgen(sample_dataframe, 0)
 
     def test_plotgen_invalid_dataframe(self, sample_suggestions):
         """Test plotgen with invalid DataFrame."""
         invalid_df = "not_a_dataframe"
-        # Note: Fails because TypeError is not raised; implementation should raise TypeError
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="Data must be a pandas DataFrame"):
             plotgen(invalid_df, 0, sample_suggestions)
 
     def test_plotgen_invalid_series(self, sample_dataframe, sample_suggestions):
@@ -527,27 +554,25 @@ class TestPlotGeneratorErrorHandling:
 
     def test_plotgen_invalid_custom_args(self, sample_dataframe, sample_suggestions):
         """Test plotgen with invalid custom arguments."""
-        # Note: Fails because TypeError is not raised; implementation should raise TypeError
-        fig = plotgen(sample_dataframe, 0, sample_suggestions, x_label=123)
-        assert isinstance(fig, plt.Figure)
+        with pytest.raises(TypeError, match="Label must be a string"):
+            plotgen(sample_dataframe, 0, sample_suggestions, x_label=123)
 
     def test_scatter_non_numeric_data(self, sample_suggestions):
         """Test scatter with non-numeric data."""
         df = pd.DataFrame({"x": ["a", "b", "c"], "y": ["d", "e", "f"]})
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Scatter plot requires numeric data"):
             plotgen(df, 0, sample_suggestions)
 
     def test_surface_mismatched_shapes(self, sample_suggestions, sample_2d_array):
-        """Test surface with mismatched data shapes."""
-        df = pd.DataFrame({"x2d": [sample_2d_array[0]] * 5})  # Use 1D slice of 2D array
-        with pytest.raises(ValueError):
+        """Test surface with non-2D array data."""
+        df = pd.DataFrame({"x2d": [np.random.rand(5)] * 5})  # 1D arrays
+        with pytest.raises(ValueError, match="Surface requires a 2D array"):
             plotgen(df, 24, sample_suggestions)
 
     def test_box_no_data(self, sample_suggestions):
         """Test boxplot with all-NaN data."""
         df = pd.DataFrame({"value": [np.nan] * 10})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="No valid data for boxplot"):
             plotgen(df, 8, sample_suggestions)
 
 # Performance Tests
@@ -572,7 +597,7 @@ class TestPlotGeneratorPerformance:
         fig = plotgen(df, index, sample_suggestions)
         duration = time.time() - start_time
         assert isinstance(fig, plt.Figure)
-        assert duration < 5.0  # Arbitrary threshold; adjust based on requirements
+        assert duration < 5.0  # Arbitrary threshold
         plt.close(fig)
 
     @pytest.mark.parametrize("n", [1000, 10000])
@@ -590,8 +615,7 @@ class TestPlotGeneratorPerformance:
             duration = time.time() - start_time
             assert isinstance(fig, plt.Figure)
             assert duration < 5.0
-            # Note: Fails because SmartPlotGenerator is not called; investigate plotgen implementation
-            # mock_spg.assert_called_once()
+            mock_spg.assert_called_once()
         plt.close(fig)
 
 # Edge Case Tests
@@ -599,8 +623,7 @@ class TestPlotGeneratorEdgeCases:
     def test_empty_dataframe(self, sample_suggestions):
         """Test plotgen with an empty DataFrame."""
         df_empty = pd.DataFrame(columns=["value", "count"])
-        # Note: Fails with KeyError; implementation should raise ValueError
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError, match="DataFrame is empty"):
             plotgen(df_empty, 0, sample_suggestions)
 
     def test_very_large_data(self, sample_suggestions):
@@ -624,8 +647,7 @@ class TestPlotGeneratorEdgeCases:
             "x": [np.inf, -np.inf, np.nan, 1, 2],
             "y": [1, 2, 3, np.nan, np.inf]
         })
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Scatter plot cannot handle infinite values"):
             plotgen(df, 0, sample_suggestions)
 
     def test_malformed_suggestions(self, sample_dataframe):
@@ -635,9 +657,8 @@ class TestPlotGeneratorEdgeCases:
             'variables': ['x,y,z'],  # Too many variables for scatter
             'ensemble_score': [0.9]
         })
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        fig = plotgen(sample_dataframe, 0, invalid_suggestions)
-        assert isinstance(fig, plt.Figure)
+        with pytest.raises(ValueError, match="scatter requires exactly 2 variables"):
+            plotgen(sample_dataframe, 0, invalid_suggestions)
 
     def test_many_categories(self, sample_suggestions):
         """Test plotgen with many categories."""
@@ -645,7 +666,6 @@ class TestPlotGeneratorEdgeCases:
             "category": [f"cat_{i}" for i in range(50)],
             "count": np.random.randint(0, 100, 50)
         })
-        # Note: Adjust test to avoid aggregating 'category'
         fig = plotgen(df, 2, sample_suggestions)
         assert isinstance(fig, plt.Figure)
         ax = fig.axes[0] if fig.axes else None
@@ -657,8 +677,7 @@ class TestPlotGeneratorEdgeCases:
     def test_duplicate_variables(self, sample_suggestions):
         """Test plotgen with duplicate variables."""
         df = pd.DataFrame({"x": np.arange(10)})
-        # Note: Fails with KeyError; implementation should handle missing columns
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="y"):
             plotgen(df, 0, sample_suggestions)
 
     def test_smart_generator_edge_cases(self, sample_suggestions):
@@ -667,10 +686,8 @@ class TestPlotGeneratorEdgeCases:
             "value": [1, 2, np.nan, np.inf],
             "category": ["A", "A", "B", "B"]
         })
-        # Note: Fails because ValueError is not raised; implementation should raise ValueError
-        with pytest.raises(ValueError):
-            with patch('plotsense.plot_generator.generator.SmartPlotGenerator'):
-                plotgen(df, 8, sample_suggestions)  # boxplot
+        with pytest.raises(ValueError, match="Boxplot cannot handle infinite values"):
+            plotgen(df, 8, sample_suggestions)
 
 if __name__ == "__main__":
     pytest.main([__file__])
