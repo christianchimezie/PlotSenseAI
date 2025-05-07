@@ -35,24 +35,22 @@ def sample_dataframe():
 
 @pytest.fixture
 def sample_2d_array():
-    """Fixture for a 2D array used in specific plots like surface, imshow."""
+    """Fixture for a 2D array used in specific plots like surface."""
     return np.random.rand(10, 10)  # Smaller size to avoid memory issues
 
 @pytest.fixture
 def sample_suggestions():
-    """Sample suggestions DataFrame covering all plot types."""
+    """Sample suggestions DataFrame covering supported plot types."""
     return pd.DataFrame({
         'plot_type': ['scatter', 'line', 'bar', 'barh', 'stem', 'step', 'fill_between',
-                      'hist', 'boxplot', 'violinplot', 'errorbar', 'imshow', 'pcolor',
-                      'pcolormesh', 'contour', 'contourf', 'pie', 'polar', 'hexbin',
-                      'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'],
+                      'hist', 'boxplot', 'violinplot', 'errorbar', 'pie', 'polar',
+                      'hexbin', 'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'],
         'variables': ['x,y', 'x,y', 'category,count', 'category,count',
                       'x,y', 'x,y', 'x,y,z',
                       'value', 'value', 'value,category', 'x,y,flag',
-                      'x2d', 'x2d', 'x2d', 'x2d', 'x2d', 'category',
-                      'x,y', 'x,y', 'x,y,u,v',
+                      'category', 'x,y', 'x,y', 'x,y,u,v',
                       'x,y,u,v', 'x,y,z', 'x,y,z', 'x,y,z,dx,dy,dz', 'x2d'],
-        'ensemble_score': np.random.rand(25)
+        'ensemble_score': np.random.rand(20)
     })
 
 @pytest.fixture
@@ -78,13 +76,19 @@ class TestPlotGeneratorUnit:
         pg = PlotGenerator(sample_dataframe, sample_suggestions)
         assert pg.data.equals(sample_dataframe)
         assert pg.suggestions.equals(sample_suggestions)
-        assert len(pg.plot_functions) == 25
+        expected_functions = set(['scatter', 'line', 'bar', 'barh', 'stem', 'step', 'fill_between',
+                                'hist', 'boxplot', 'violinplot', 'errorbar', 'pie', 'polar',
+                                'hexbin', 'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'])
+        assert set(pg.plot_functions.keys()) == expected_functions
 
     def test_init_smart_plot_generator(self, sample_dataframe, sample_suggestions):
         spg = SmartPlotGenerator(sample_dataframe, sample_suggestions)
         assert spg.data.equals(sample_dataframe)
         assert spg.suggestions.equals(sample_suggestions)
-        assert len(spg.plot_functions) == 25
+        expected_functions = set(['scatter', 'line', 'bar', 'barh', 'stem', 'step', 'fill_between',
+                                'hist', 'boxplot', 'violinplot', 'errorbar', 'pie', 'polar',
+                                'hexbin', 'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'])
+        assert set(spg.plot_functions.keys()) == expected_functions
         assert spg.plot_functions['boxplot'] != PlotGenerator(sample_dataframe, sample_suggestions).plot_functions['boxplot']
         assert spg.plot_functions['violinplot'] != PlotGenerator(sample_dataframe, sample_suggestions).plot_functions['violinplot']
         assert spg.plot_functions['hist'] != PlotGenerator(sample_dataframe, sample_suggestions).plot_functions['hist']
@@ -107,11 +111,10 @@ class TestPlotGeneratorUnit:
     def test_initialize_plot_functions(self, plot_generator):
         funcs = plot_generator._initialize_plot_functions()
         assert all(callable(func) for func in funcs.values())
-        assert len(funcs) == 25
-        assert set(funcs.keys()) == set(['scatter', 'line', 'bar', 'barh', 'stem', 'step', 'fill_between',
-                                         'hist', 'boxplot', 'violinplot', 'errorbar', 'imshow', 'pcolor',
-                                         'pcolormesh', 'contour', 'contourf', 'pie', 'polar', 'hexbin',
-                                         'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'])
+        expected_functions = set(['scatter', 'line', 'bar', 'barh', 'stem', 'step', 'fill_between',
+                                'hist', 'boxplot', 'violinplot', 'errorbar', 'pie', 'polar',
+                                'hexbin', 'quiver', 'streamplot', 'plot3d', 'scatter3d', 'bar3d', 'surface'])
+        assert set(funcs.keys()) == expected_functions
 
     def test_set_labels(self, plot_generator):
         fig, ax = plt.subplots()
@@ -240,42 +243,6 @@ class TestPlotFunctions:
             assert ax.get_xticklabels()[0].get_rotation() == 90
         plt.close(fig)
 
-    def test_create_imshow(self, plot_generator, sample_2d_array):
-        # Store 2D array as a single cell to match DataFrame structure
-        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
-        fig = plot_generator._create_imshow(["x2d"])
-        ax = fig.axes[0]
-        assert len(ax.images) == 1
-        plt.close(fig)
-
-    def test_create_pcolor(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
-        fig = plot_generator._create_pcolor(["x2d"])
-        ax = fig.axes[0]
-        assert len(ax.collections) == 1
-        plt.close(fig)
-
-    def test_create_pcolormesh(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
-        fig = plot_generator._create_pcolormesh(["x2d"])
-        ax = fig.axes[0]
-        assert len(ax.collections) == 1
-        plt.close(fig)
-
-    def test_create_contour(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
-        fig = plot_generator._create_contour(["x2d"])
-        ax = fig.axes[0]
-        assert len(ax.collections) == 1
-        plt.close(fig)
-
-    def test_create_contourf(self, plot_generator, sample_2d_array):
-        plot_generator.data["x2d"] = [sample_2d_array] * len(plot_generator.data)
-        fig = plot_generator._create_contourf(["x2d"])
-        ax = fig.axes[0]
-        assert len(ax.collections) == 1
-        plt.close(fig)
-
     def test_create_pie(self, plot_generator):
         fig = plot_generator._create_pie(["category"])
         ax = fig.axes[0]
@@ -398,7 +365,7 @@ class TestPlotFunctions:
 
 # Integration Tests
 class TestPlotGeneratorIntegration:
-    @pytest.mark.parametrize("index", [0, 5, 10, 15, 20])
+    @pytest.mark.parametrize("index", [0, 5, 10, 15, 19])
     def test_plotgen_with_index(self, sample_dataframe, sample_suggestions, index, sample_2d_array):
         # Add x2d for plots requiring 2D arrays
         if sample_suggestions.iloc[index]['variables'] == 'x2d':
@@ -407,12 +374,12 @@ class TestPlotGeneratorIntegration:
         assert isinstance(fig, plt.Figure)
         ax = fig.axes[0] if fig.axes else None
         if ax:
-            if index in [21, 22, 23]:  # Only plot3d, scatter3d, bar3d are 3D
+            if index in [16, 17, 18]:  # Only plot3d, scatter3d, bar3d are 3D
                 assert ax.name == '3d'
             # Skip figure size check for 2D array plots
             plot_type = sample_suggestions.iloc[index]['plot_type']
             variables = sample_suggestions.iloc[index]['variables']
-            if variables != 'x2d' and plot_type not in ['imshow', 'pcolor', 'pcolormesh', 'contour', 'contourf', 'surface']:
+            if variables != 'x2d' and plot_type not in ['surface']:
                 unique_x = len(sample_dataframe["x"].unique())
                 if unique_x > 10:
                     assert fig.get_size_inches()[0] >= 12
@@ -453,7 +420,7 @@ class TestPlotGeneratorIntegration:
 
 # End-to-End Tests
 class TestPlotGeneratorEndToEnd:
-    @pytest.mark.parametrize("index", range(24))  # Exclude surface for now
+    @pytest.mark.parametrize("index", range(19))  # Exclude surface for now
     def test_all_plot_types_default(self, sample_dataframe, sample_suggestions, index, sample_2d_array):
         """Test all plot types with default settings."""
         if sample_suggestions.iloc[index]['variables'] == 'x2d':
@@ -462,14 +429,14 @@ class TestPlotGeneratorEndToEnd:
         assert isinstance(fig, plt.Figure)
         ax = fig.axes[0] if fig.axes else None
         if ax:
-            if index == 0:  # Scatter
+            if index in [16, 17, 18]:  # Only plot3d, scatter3d, bar3d are 3D
+                assert ax.name == '3d'
+                assert len(ax.lines) == 1 if index == 16 else len(ax.collections) == 1
+            elif index == 0:  # Scatter
                 assert len(ax.collections) == 1
                 assert len(ax.collections[0].get_offsets()) == len(sample_dataframe)
             elif index == 2:  # Bar
                 assert len(ax.patches) == len(sample_dataframe["category"].unique())
-            elif index == 21:  # Plot3D
-                assert ax.name == '3d'
-                assert len(ax.lines) == 1
         plt.close(fig)
 
     @pytest.mark.parametrize("index", [8, 9, 7])  # boxplot, violinplot, hist
@@ -523,7 +490,7 @@ class TestPlotGeneratorErrorHandling:
     def test_plotgen_invalid_index(self, sample_dataframe, sample_suggestions):
         """Test plotgen with invalid index."""
         with pytest.raises(IndexError):
-            plotgen(sample_dataframe, 25, sample_suggestions)
+            plotgen(sample_dataframe, 20, sample_suggestions)
 
     def test_plotgen_empty_variables(self, sample_dataframe, sample_suggestions):
         """Test plotgen with empty variables in suggestions."""
@@ -571,7 +538,7 @@ class TestPlotGeneratorErrorHandling:
         """Test surface with non-2D array data."""
         df = pd.DataFrame({"x2d": [np.random.rand(5)] * 5})  # 1D arrays
         with pytest.raises(ValueError, match="Surface requires a 2D array"):
-            plotgen(df, 24, sample_suggestions)
+            plotgen(df, 19, sample_suggestions)
 
     def test_box_no_data(self, sample_suggestions):
         """Test boxplot with all-NaN data."""
@@ -582,7 +549,7 @@ class TestPlotGeneratorErrorHandling:
 # Performance Tests
 class TestPlotGeneratorPerformance:
     @pytest.mark.parametrize("n", [1000, 10000])
-    @pytest.mark.parametrize("index", [0, 7, 21])  # Scatter, Hist, Plot3D
+    @pytest.mark.parametrize("index", [0, 7, 16])  # Scatter, Hist, Plot3D
     def test_performance_various_plots(self, sample_suggestions, n, index):
         """Test performance of plotgen with various plot types and data sizes."""
         df = pd.DataFrame({

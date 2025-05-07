@@ -9,6 +9,9 @@ _plot_generator_instance = None
 class PlotGenerator:
     """Base class for generating various types of plots from a DataFrame."""
     
+    # Define unsupported plot types as a class attribute
+    UNSUPPORTED_PLOTS = {'imshow', 'pcolor', 'pcolormesh', 'contour', 'contourf'}
+
     def __init__(self, data: pd.DataFrame, suggestions: Optional[pd.DataFrame] = None):
         """Initialize PlotGenerator with data and optional suggestions."""
         if not isinstance(data, pd.DataFrame):
@@ -20,7 +23,7 @@ class PlotGenerator:
         self.plot_functions = self._initialize_plot_functions()
 
     def _initialize_plot_functions(self) -> Dict[str, Callable]:
-        """Initialize dictionary of plot functions."""
+        """Initialize dictionary of plot functions, excluding unsupported plots."""
         return {
             'scatter': self._create_scatter,
             'line': self._create_line,
@@ -33,11 +36,6 @@ class PlotGenerator:
             'boxplot': self._create_box,
             'violinplot': self._create_violin,
             'errorbar': self._create_errorbar,
-            'imshow': self._create_imshow,
-            'pcolor': self._create_pcolor,
-            'pcolormesh': self._create_pcolormesh,
-            'contour': self._create_contour,
-            'contourf': self._create_contourf,
             'pie': self._create_pie,
             'polar': self._create_polar,
             'hexbin': self._create_hexbin,
@@ -101,7 +99,7 @@ class PlotGenerator:
             raise ValueError("No variables specified")
 
         # Debug print to diagnose variable parsing
-        print(f"Parsed variables: {variables}")
+        #print(f"Parsed variables: {variables}")
 
         # Validate variables exist in DataFrame
         for var in variables:
@@ -109,6 +107,12 @@ class PlotGenerator:
                 raise KeyError(f"Variable '{var}' not found in DataFrame")
 
         plot_type = suggestion['plot_type']
+
+        # Check if the plot type is unsupported
+        if plot_type in self.UNSUPPORTED_PLOTS:
+            print(f"Sorry, the plot type '{plot_type}' is not supported at the moment.")
+            return plt.Figure()
+
         plot_func = self.plot_functions.get(plot_type)
         if plot_func is None:
             raise ValueError(f"Unsupported plot type: {plot_type}")
@@ -304,61 +308,6 @@ class PlotGenerator:
             raise ValueError("Errorbar plot x and y must be numeric")
         ax.errorbar(x, y, yerr=yerr)
         self._set_labels(ax, variables, **kwargs)
-        return fig
-
-    def _create_imshow(self, variables: List[str], **kwargs) -> plt.Figure:
-        if len(variables) != 1:
-            raise ValueError("imshow requires exactly 1 variable (2D array)")
-        data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
-        if not isinstance(data, np.ndarray) or data.ndim != 2:
-            raise ValueError("imshow requires a 2D array")
-        ax.imshow(data)
-        self._set_labels(ax, [variables[0], variables[0]], **kwargs)
-        return fig
-
-    def _create_pcolor(self, variables: List[str], **kwargs) -> plt.Figure:
-        if len(variables) != 1:
-            raise ValueError("pcolor requires exactly 1 variable (2D array)")
-        data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
-        if not isinstance(data, np.ndarray) or data.ndim != 2:
-            raise ValueError("pcolor requires a 2D array")
-        ax.pcolor(data)
-        self._set_labels(ax, [variables[0], variables[0]], **kwargs)
-        return fig
-
-    def _create_pcolormesh(self, variables: List[str], **kwargs) -> plt.Figure:
-        if len(variables) != 1:
-            raise ValueError("pcolormesh requires exactly 1 variable (2D array)")
-        data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
-        if not isinstance(data, np.ndarray) or data.ndim != 2:
-            raise ValueError("pcolormesh requires a 2D array")
-        ax.pcolormesh(data)
-        self._set_labels(ax, [variables[0], variables[0]], **kwargs)
-        return fig
-
-    def _create_contour(self, variables: List[str], **kwargs) -> plt.Figure:
-        if len(variables) != 1:
-            raise ValueError("contour requires exactly 1 variable (2D array)")
-        data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
-        if not isinstance(data, np.ndarray) or data.ndim != 2:
-            raise ValueError("contour requires a 2D array")
-        ax.contour(data)
-        self._set_labels(ax, [variables[0], variables[0]], **kwargs)
-        return fig
-
-    def _create_contourf(self, variables: List[str], **kwargs) -> plt.Figure:
-        if len(variables) != 1:
-            raise ValueError("contourf requires exactly 1 variable (2D array)")
-        data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
-        if not isinstance(data, np.ndarray) or data.ndim != 2:
-            raise ValueError("contourf requires a 2D array")
-        ax.contourf(data)
-        self._set_labels(ax, [variables[0], variables[0]], **kwargs)
         return fig
 
     def _create_pie(self, variables: List[str], **kwargs) -> plt.Figure:
