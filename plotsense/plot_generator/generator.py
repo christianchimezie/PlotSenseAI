@@ -303,7 +303,7 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("imshow requires exactly 1 variable (2D array)")
         data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data['x'].unique()) > 10 else (6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
         if not isinstance(data, np.ndarray) or data.ndim != 2:
             raise ValueError("imshow requires a 2D array")
         ax.imshow(data)
@@ -314,7 +314,7 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("pcolor requires exactly 1 variable (2D array)")
         data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data["x"].unique()) > 10 else (6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
         if not isinstance(data, np.ndarray) or data.ndim != 2:
             raise ValueError("pcolor requires a 2D array")
         ax.pcolor(data)
@@ -325,7 +325,7 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("pcolormesh requires exactly 1 variable (2D array)")
         data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data["x"].unique()) > 10 else (6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
         if not isinstance(data, np.ndarray) or data.ndim != 2:
             raise ValueError("pcolormesh requires a 2D array")
         ax.pcolormesh(data)
@@ -336,7 +336,7 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("contour requires exactly 1 variable (2D array)")
         data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data["x"].unique()) > 10 else (6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
         if not isinstance(data, np.ndarray) or data.ndim != 2:
             raise ValueError("contour requires a 2D array")
         ax.contour(data)
@@ -347,7 +347,7 @@ class PlotGenerator:
         if len(variables) != 1:
             raise ValueError("contourf requires exactly 1 variable (2D array)")
         data = self.data[variables[0]].iloc[0]
-        fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data["x"].unique()) > 10 else (6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
         if not isinstance(data, np.ndarray) or data.ndim != 2:
             raise ValueError("contourf requires a 2D array")
         ax.contourf(data)

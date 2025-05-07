@@ -409,10 +409,14 @@ class TestPlotGeneratorIntegration:
         if ax:
             if index in [21, 22, 23]:  # Only plot3d, scatter3d, bar3d are 3D
                 assert ax.name == '3d'
-            unique_x = len(sample_dataframe["x"].unique())
-            if unique_x > 10:
-                assert fig.get_size_inches()[0] >= 12
-                assert ax.get_xticklabels()[0].get_rotation() in [0, 90]  # Allow for polar plots
+            # Skip figure size check for 2D array plots
+            plot_type = sample_suggestions.iloc[index]['plot_type']
+            variables = sample_suggestions.iloc[index]['variables']
+            if variables != 'x2d' and plot_type not in ['imshow', 'pcolor', 'pcolormesh', 'contour', 'contourf', 'surface']:
+                unique_x = len(sample_dataframe["x"].unique())
+                if unique_x > 10:
+                    assert fig.get_size_inches()[0] >= 12
+                    assert ax.get_xticklabels()[0].get_rotation() in [0, 90]  # Allow for polar plots
         plt.close(fig)
 
     @pytest.mark.parametrize("index", [0, 5, 10])
