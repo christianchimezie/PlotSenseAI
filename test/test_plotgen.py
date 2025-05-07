@@ -164,7 +164,7 @@ class TestPlotFunctions:
 
     def test_create_barh(self, plot_generator):
         # Skip due to MultiIndex dtype issue; revisit if implementation changes
-        pytest.skip("Skipping due to MultiIndex dtype issue in barh")
+        #pytest.skip("Skipping due to MultiIndex dtype issue in barh")
         fig = plot_generator._create_barh(["category", "count"])
         ax = fig.axes[0]
         assert len(ax.patches) > 0

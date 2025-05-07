@@ -159,7 +159,14 @@ class PlotGenerator:
         if len(variables) != 2:
             raise ValueError("barh requires exactly 2 variables")
         fig, ax = plt.subplots(figsize=(12, 4.8) if len(self.data[variables[0]].unique()) > 10 else (6.4, 4.8))
-        x = self.data[variables[0]].astype(str)
+
+        x = self.data[variables[0]]
+        # Handle MultiIndex or complex dtypes by converting to clean strings
+        if isinstance(x.dtype, pd.MultiIndex) or x.dtype == object or isinstance(x, pd.MultiIndex):
+            x = x.astype(str)  # Fallback to string conversion
+        else:
+            x = x.astype(str)  # Treat as categorical
+            
         y = self.data[variables[1]].dropna()
         if not np.issubdtype(y.dtype, np.number):
             raise ValueError("Horizontal bar plot y-values must be numeric")
