@@ -1,0 +1,26 @@
+update functions in plotgen to have the following
+ 
+- ensure that users have the ability to specify their labels.
+# Extract label-related kwargs if provided
+    x_label = kwargs.pop('x_label', None)
+    y_label = kwargs.pop('y_label', None)
+    title = kwargs.pop('title', None)
+
+- Automatic plot increase and xticks orientation change ( This might not be neccesary for every chart)
+# Rotate xticks if too many
+if len(grouped) > 10:
+    # Increase figure width and rotate xticks
+    fig.set_size_inches(max(12, len(grouped) * 0.5), 8)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+add heatmap, jointplot, pairplot and any other neccesary function we are missing
+
+create a pytest script for plotgen in the testing folder.
+# Unit Tests
+# Integration Tests
+# End-to-End Tests
+# Error Handling Tests
+# Performance Tests
+# Edge Case Tests
+ 
+ 

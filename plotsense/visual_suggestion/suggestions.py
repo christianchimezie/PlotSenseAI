@@ -370,44 +370,80 @@ class VisualizationRecommender:
             {df_description}
 
             Recommend {self.n_to_request} insightful visualizations using matplotlib's plotting functions.
-            For each suggestion, follow this format:
+            For each suggestion, follow this exact format:
 
-            Plot Type: <matplotlib function name - exact, like bar, scatter, hist, boxplot, pie>
+            Plot Type: <matplotlib function name - exact, like bar, scatter, hist, boxplot, pie, contour, quiver, etc.>
             Variables: <comma-separated list of variables>
-            Rationale: <1-2 sentences explaining why this visualization is useful, based on column data types and insight potential>
+            Rationale: <1-2 sentences explaining why this visualization is useful>
             ---
 
-            Focus your visualizations on:
-            1. Revealing meaningful patterns or relationships
-            2. Choosing appropriate plot types for the column data types:
-                - Numerical → hist, scatter, boxplot, line, hexbin
-                - Categorical → bar, pie
-                - Date/Time → line, area, bar
-                - Multivariate combinations → scatter, pairplot, heatmap
-            3. Avoiding misleading representations
-            4. Providing practical, actionable insights
+            GENERAL RULES FOR ALL PLOT TYPES:
+            1. Ensure the plot type is a valid matplotlib function
+            2. The plot type must be appropriate for the variables' data types
+            3. The number of variables must match what the plot type requires
+            4. Variables must exist in the dataset
+            5. Never combine incompatible variables
+            6. Always specify complete variable sets
 
-            Important guidelines:
-            1. Use ONLY these matplotlib plot types (use exact names) such as  bar, scatter, hist, boxplot, pie, line, heatmap, violinplot, area, hexbin, pairplot, jointplot and more.
-            2. Variables must exist in the dataset
-            3. Prioritize more informative plot types
-            4. Include both univariate and multivariate plots
-            5. Never use general terms like "chart" or "graph" - always use the exact matplotlib function name
-            6. For seaborn-style plots that wrap matplotlib, use the underlying matplotlib function
-            7. Avoid recommending plots that mismatch with variable types
+            COMMON PLOT TYPE REQUIREMENTS (non-exhaustive):
+            1. bar: 1 categorical (x) + 1 numerical (y)
+            2. scatter: Exactly 2 numerical variables
+            3. hist: Exactly 1 numerical variable
+            4. boxplot: 1 numerical OR 1 categorical + 1 numerical
+            5. pie: Exactly 1 categorical variable
+            6. line: 1 numerical (y) OR 1 date/time (x) + 1 numerical (y)
+            7. heatmap: 2 categorical + 1 numerical OR correlation matrix
+            8. violinplot: Same as boxplot
+            9. hexbin: Exactly 2 numerical variables
+            10. pairplot: 2+ numerical variables
+            11. jointplot: Exactly 2 numerical variables
+            12. contour: 2 numerical variables for grid + 1 for values
+            13. quiver: 2 numerical variables for grid + 2 for vectors
+            14. imshow: 2D array of numerical values
+            15. errorbar: 1 numerical (x) + 1 numerical (y) + error values
+            16. stackplot: 1 numerical (x) + multiple numerical (y)
+            17. stem: 1 numerical (x) + 1 numerical (y)
+            18. fill_between: 1 numerical (x) + 2 numerical (y)
+            19. pcolormesh: 2D grid of numerical values
+            20. polar: Angular and radial coordinates
 
-            Example correct responses:
-            Plot Type: scatter
-            Variables: temperature, humidity
-            Rationale: Shows relationship between temperature and humidity
+            If suggesting a plot not listed above, ensure:
+            - The function exists in matplotlib
+            - Variable types and counts are explicitly compatible
+            - The rationale clearly explains the insight provided
+
+            Additional Requirements:
+            1. For specialized plots (like quiver, contour), ensure all required components are specified
+            2. Consider the statistical properties and relationships of the variables
+            3. Suggest plots that would reveal meaningful insights about the data
+            4. Include both common and advanced plots when appropriate
+
+            Example CORRECT suggestions:
+            Plot Type: boxplot
+            Variables: price
+            Rationale: Shows distribution of prices across all observations
             ---
-            Plot Type: bar
-            Variables: location, sales
-            Rationale: Compares sales across different locations
+            Plot Type: contour
+            Variables: x_grid, y_grid, density
+            Rationale: Visualizes density changes across a 2D space
             ---
-            Plot Type: hist
-            Variables: temperature
-            Rationale: Shows distribution of temperature values
+            Plot Type: quiver
+            Variables: x_pos, y_pos, x_dir, y_dir
+            Rationale: Shows vector field of directions and magnitudes
+            ---
+            Plot Type: imshow
+            Variables: image_matrix
+            Rationale: Displays the 2D image data
+
+            Example INCORRECT suggestions (NEVER DO THESE):
+            Plot Type: boxplot
+            Variables: age, income  # WRONG - two numericals
+            ---
+            Plot Type: pie
+            Variables: salary  # WRONG - numerical variable
+            ---
+            Plot Type: contour
+            Variables: temperature  # WRONG - needs 3 variables for 2D contour
         """)
 
     def _query_llm(self, prompt: str, model: str) -> str:
