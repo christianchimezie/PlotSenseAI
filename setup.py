@@ -1,4 +1,40 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-if __name__ == "__main__":
-    setup()
+setup(
+    name="plotsense",
+    version="0.1.2",
+    author="Christian Chimezie, Toluwaleke Ogidan, Grace Farayola, Amaka Iduwe, Nelson Ogbeide, Faith Ojumah, Olamilekan Ajao",
+    author_email="chimeziechristiancc@gmail.com, gbemilekeogidan@gmail.com, gracefarayola@gmail.com, nwaamaka_iduwe@yahoo.com, Ogbeide331@gmail.com, Onyekaojumah22@gmail.com, olamilekan011@gmail.com",
+    description="An intelligent plotting package with suggestions and explanations",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/christianchimezie/PlotSenseAI",
+    project_urls={
+        "Documentation": "https://github.com/christianchimezie/PlotSenseAI/blob/main/README.md",
+    },
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Topic :: Scientific/Engineering :: Visualization",
+    ],
+    packages=find_packages(),
+    python_requires=">=3.8",
+    install_requires=[
+        "matplotlib>=3.8.0",
+        "seaborn>=0.11",
+        "pandas>=1.0",
+        "numpy>=1.18",
+        "python-dotenv",
+        "groq",
+        "requests",
+    ],
+    license="Apache License 2.0",
+)
