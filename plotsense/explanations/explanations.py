@@ -1,188 +1,70 @@
-import base64
 import os
-import matplotlib.pyplot as plt
-from typing import Union, Optional, Dict
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+from typing import List, Tuple, Union, Optional, Dict
 from dotenv import load_dotenv
-from groq import Groq
-import warnings
-import builtins
-from plotsense.exceptions import PlotSenseAPIError, PlotSenseDataError, PlotSenseConfigError
 
+from plotsense.core.ai_interface import AIModelInterface
+from plotsense.core.enums.strategy import StrategyName
+from plotsense.core.providers.provider_manager import ProviderManager
+from plotsense.core.utils import encode_image, save_plot_to_image
 
 load_dotenv()
 
 
 class PlotExplainer:
     """
-    A class to generate and refine explanations for plots using LLMs."""
-    DEFAULT_MODELS = {
-        'groq': ['meta-llama/llama-4-scout-17b-16e-instruct',
-                 'meta-llama/llama-4-maverick-17b-128e-instruct'],
-    }
+    A class to generate and refine explanations for plots using LLMs.
+    """
 
     def __init__(
-            self,
-            api_keys: Optional[Dict[str, str]] = None,
-            max_iterations: int = 3,
-            interactive: bool = True,
-            timeout: int = 30
+        self,
+        api_keys: Optional[Dict[str, str]],
+        strategy: StrategyName,
+        selected_models: Optional[List[Tuple[str, str]]],
+        max_iterations: int,
+        interactive: bool,
+        timeout: int,
     ):
-        # Default to empty dict if None
-        api_keys = api_keys or {}
-
-        # Initialize API keys with environment variable or provided keys
-        self.api_keys = {
-            'groq': os.getenv('GROQ_API_KEY')
-        }
-        # Update with provided API keys
-        self.api_keys.update(api_keys)
-        # Set interactive mode and timeout for API calls
+        self.timeout = timeout # timeout for API calls
+        self.max_iterations = max_iterations # max iterations for refinement
         self.interactive = interactive
-        # Set timeout for API calls
-        self.timeout = timeout
-        # Initialize empty dict for clients
-        self.clients = {}
-        # Initialize empty list for available models
-        self.available_models = []
-        # Set max iterations for refinement
-        self.max_iterations = max_iterations
+        self.strategy_name = strategy # strategy for provider selection
 
-        # Validate API keys and initialize clients
-        self._validate_keys()
-        # Initialize clients
-        self._initialize_clients()
-        # Detect available models
-        self._detect_available_models()
+        selected_providers = {p for p, _ in (selected_models or [])}
 
-    def _validate_keys(self):
-        """Validate that required API keys are present"""
-        service_links = {
-            'groq': 'https://console.groq.com/keys'
-        }
-
-        for service in ['groq']:
-            if not self.api_keys.get(service):
-                if self.interactive:
-                    try:
-                        link = service_links.get(service, f"the {service.upper()} website")
-                        message = (
-                            f"Enter {service.upper()} API key (get it at {link}): "
-                        )
-                        self.api_keys[service] = builtins.input(message).strip()
-                        if not self.api_keys[service]:
-                            raise PlotSenseDataError(f"{service.upper()} API key is required")
-                    except (EOFError, OSError):
-                        # Handle cases where input is not available
-                        raise PlotSenseConfigError(f"{service.upper()} API key is required (get it at {service_links.get(service)})")
-                else:
-                    raise PlotSenseConfigError(
-                        f"{service.upper()} API key is required. "
-                        f"Set it in the environment or pass it as an argument. "
-                        f"You can get it at {service_links.get(service)}"
-                    )
-
-    def _initialize_clients(self):
-        """Initialize API clients based on provided API keys"""
-        self.clients = {}
-        if self.api_keys.get('groq'):
-            try:
-                self.clients['groq'] = Groq(api_key=self.api_keys['groq'])
-            except Exception as e:
-                warnings.warn(f"Could not initialize Groq client: {e}", ImportWarning)
-                raise PlotSenseAPIError(f"Groq client initialization error: {e}")
-
-    def _detect_available_models(self):
-        """Detect available models based on initialized clients"""
-        self.available_models = []
-        for provider, client in self.clients.items():
-            if client and provider in self.DEFAULT_MODELS:
-                self.available_models.extend(self.DEFAULT_MODELS[provider])
-
-    def save_plot_to_image(
-            self,
-            plot_object: Union[plt.Figure, plt.Axes],
-            output_path: str = "temp_plot.jpg"
-    ):
-        """Save plot to an image file"""
-        if isinstance(plot_object, plt.Axes):
-            fig = plot_object.figure
-        else:
-            fig = plot_object
-
-        fig.savefig(output_path, format='jpeg', dpi=100, bbox_inches='tight')
-        return output_path
-
-    def encode_image(
-            self,
-            image_path: str
-    ) -> str:
-        """Encode image file to base64 string"""
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
-
-    def _query_model(
-            self,
-            model: str,
-            prompt: str,
-            image_path: str,
-            custom_parameters: Optional[Dict] = None
-    ) -> str:
-        """Generic model querying method with provider-specific logic"""
-
-        base64_image = self.encode_image(image_path)
-
-        # Determine provider based on model name
-        provider = next(
-            (p for p, models in self.DEFAULT_MODELS.items() if model in models),
-            None
+        self.manager = ProviderManager(
+            api_keys=api_keys or {},
+            interactive=interactive,
+            restrict_to=list(selected_providers) if selected_providers else None
         )
+        self.ai_interface = AIModelInterface(self.manager, timeout=self.timeout)
 
-        if not provider:
-            raise ValueError(f"No provider found for model {model}")
+        all_models = self.manager.list_all_models()
+        self.available_models = [
+            (provider, model)
+            for provider, models in all_models.items()
+            for model in models
+        ]
 
-        try:
-            if provider == 'groq':
-                client = self.clients['groq']
+        if selected_models:
+            selected_set = set(selected_models)
+            self.available_models = [
+                pair for pair in self.available_models if pair in selected_set
+            ]
 
-                # Merge default and custom parameters
-                default_params = {
-                    'max_tokens': 1000,
-                    'temperature': 0.7
-                }
-                generation_params = {**default_params, **(custom_parameters or {})}
+        if not self.available_models:
+            raise ValueError(
+                "No available models detected — check API keys or selection input."
+            )
 
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": prompt},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    **generation_params
-                )
-
-                return response.choices[0].message.content
-
-        except Exception as e:
-            if "503" in str(e):
-                print(f"Groq service temporarily unavailable, retrying... Error: {e}")
-                raise  # This will trigger retry
-            error_message = f"Model querying error for {model}: {str(e)}"
-            warnings.warn(error_message)
-            return error_message
+        self.strategy = self.ai_interface._init_strategy(
+            self.strategy_name, self.available_models
+        )
 
     def refine_plot_explanation(
         self,
-        plot_object: Union[plt.Figure, plt.Axes],
+        plot_object: Union[Figure, Axes],
         prompt: str = "Explain this data visualization",
         temp_image_path: str = "temp_plot.jpg",
         custom_parameters: Optional[Dict] = None
@@ -192,27 +74,45 @@ class PlotExplainer:
             raise PlotSenseDataError("No available models detected")
 
         # Save plot to temporary image file
-        image_path = self.save_plot_to_image(plot_object, temp_image_path)
+        image_path = save_plot_to_image(plot_object, temp_image_path)
 
         try:
             # Iterative refinement process
             current_explanation = None
 
             for iteration in range(self.max_iterations):
-                current_model = self.available_models[iteration % len(self.available_models)]
+                provider, current_model = self.strategy.select_model(
+                    iteration, current_explanation
+                )
 
                 if current_explanation is None:
                     current_explanation = self._generate_initial_explanation(
-                        current_model, image_path, prompt, custom_parameters
+                        provider, current_model, image_path, prompt, custom_parameters
                     )
                 else:
                     critique = self._generate_critique(
-                        image_path, current_explanation, prompt, current_model, custom_parameters
+                        provider,
+                        current_model,
+                        image_path,
+                        current_explanation,
+                        prompt,
+                        custom_parameters,
                     )
 
                     current_explanation = self._generate_refinement(
-                        image_path, current_explanation, critique, prompt, current_model, custom_parameters
+                        provider,
+                        current_model,
+                        image_path,
+                        current_explanation,
+                        critique,
+                        prompt,
+                        custom_parameters,
                     )
+
+            if current_explanation is None:
+                raise RuntimeError(
+                    "Failed to generate an explanation — no models available or initial step failed."
+                )
 
             return current_explanation
 
@@ -223,6 +123,7 @@ class PlotExplainer:
 
     def _generate_initial_explanation(
         self,
+        provider: str,
         model: str,
         image_path: str,
         original_prompt: str,
@@ -250,18 +151,20 @@ class PlotExplainer:
         """
 
         return self._query_model(
+            provider=provider,
             model=model,
             prompt=base_prompt,
             image_path=image_path,
-            custom_parameters=custom_parameters
+            custom_parameters=custom_parameters,
         )
 
     def _generate_critique(
         self,
+        provider: str,
+        model: str,
         image_path: str,
         current_explanation: str,
         original_prompt: str,
-        model: str,
         custom_parameters: Optional[Dict] = None
     ) -> str:
         """Generate critique of current explanation"""
@@ -297,6 +200,7 @@ class PlotExplainer:
         """
 
         return self._query_model(
+            provider=provider,
             model=model,
             prompt=critique_prompt,
             image_path=image_path,
@@ -305,11 +209,12 @@ class PlotExplainer:
 
     def _generate_refinement(
         self,
+        provider: str,
+        model: str,
         image_path: str,
         current_explanation: str,
         critique: str,
         original_prompt: str,
-        model: str,
         custom_parameters: Optional[Dict] = None
     ) -> str:
         """Generate refined explanation based on critique"""
@@ -345,51 +250,84 @@ class PlotExplainer:
         - Include bullet points for clarity
         - Provide quantitative insights
         - Ensure the explanation is comprehensive and insightful
-
         """
 
         return self._query_model(
+            provider=provider,
             model=model,
-            prompt=refinement_prompt,
+            prompt= refinement_prompt,
             image_path=image_path,
             custom_parameters=custom_parameters
         )
 
+    def _query_model(
+        self, provider: str, model: str, prompt: str, image_path: str,
+        custom_parameters: Optional[Dict] = None
+    ) -> str:
+        base64_image = encode_image(image_path)
+        return self.ai_interface.query_model(
+            provider=provider,
+            model=model,
+            prompt=prompt,
+            base64_image=base64_image,
+            custom_parameters=custom_parameters
+        )
 
 # Package-level convenience function
 _explainer_instance = None
 
 
 def explainer(
-    plot_object: Union[plt.Figure, plt.Axes],
+    plot_object: Union[Figure, Axes],
     prompt: str = "Explain this data visualization",
+    *, # force keyword args after this
+
+    custom_parameters: Optional[Dict] = None,
+    strategy: StrategyName = StrategyName.ROUND_ROBIN,
+    selected_models: Optional[List[Tuple[str, str]]] = None,
+
     api_keys: Optional[Dict[str, str]] = None,
     max_iterations: int = 3,
-    custom_parameters: Optional[Dict] = None,
-    temp_image_path: str = "temp_plot.jpg"
+    interactive: bool = True,
+    timeout: int = 30,
+    temp_image_path: str = "temp_plot.jpg",
 ) -> str:
     """
-    Convenience function for iterative plot explanation
+    Convenience function to generate and refine plot explanations
+    Uses a singleton PlotExplainer instance for efficiency.
 
     Args:
-        data: Original data used to create the plot (DataFrame or numpy array)
-        plot_object: Matplotlib Figure or Axes
-        prompt: Explanation prompt
-        api_keys: API keys for different providers
-        max_iterations: Maximum refinement iterations
-        custom_parameters: Additional generation parameters
+        - plot_object: Matplotlib Figure or Axes object to explain
+        - prompt: Initial prompt for explanation generation
+        - custom_parameters: Optional dict of custom parameters for the model
+        - strategy: StrategyName enum for model selection strategy
+        - selected_models: Optional list of (provider, model) tuples to restrict models
+        - api_keys: Optional dict of API keys for providers
+        - max_iterations: Max refinement iterations
+        - interactive: Whether to prompt user for input when needed
+        - timeout: Timeout in seconds for API calls
+        - temp_image_path: Path to save temporary plot image
 
     Returns:
-        Comprehensive explanation with refinement details
+        A comprehensive, refined explanation generated by the chosen AI models.
     """
 
     global _explainer_instance
+
     if _explainer_instance is None:
-        _explainer_instance = PlotExplainer(api_keys=api_keys,
-                                            max_iterations=max_iterations)
+        _explainer_instance = PlotExplainer(
+            api_keys=api_keys,
+            strategy=strategy,
+            selected_models=selected_models,
+            max_iterations=max_iterations,
+            interactive=interactive,
+            timeout=timeout,
+        )
+
     return _explainer_instance.refine_plot_explanation(
         plot_object=plot_object,
         prompt=prompt,
         custom_parameters=custom_parameters,
         temp_image_path=temp_image_path
     )
+
