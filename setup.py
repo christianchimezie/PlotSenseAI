@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
 # Read README with explicit UTF-8 encoding
@@ -38,6 +39,9 @@ setup(
         "numpy>=1.18",
         "python-dotenv",
         "groq",
+        "anthropic",
+        "openai",
+        "google-genai",
         "requests",
         "Pillow>=9.0.0",
     ],
