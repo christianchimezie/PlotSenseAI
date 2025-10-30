@@ -1,16 +1,35 @@
 # binder requirements for plotsense demo
+
+# Core package
 plotsense
+
+# AI providers
 groq
+openai
+anthropic
+google-genai
+
+# Environment
 python-dotenv
+
+# Visualization
 matplotlib>=3.8.0
 seaborn>=0.11
+
+# Data
 pandas>=1.0
 numpy
 scipy
 scikit-learn
+
+# Notebook / demo
 jupyter
+
+# Testing
 pytest-cov
 pytest-mock
+
+# Dev tools
 flake8
 autopep8
 pre-commit
