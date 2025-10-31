@@ -20,11 +20,11 @@ class PlotExplainer:
     def __init__(
         self,
         api_keys: Optional[Dict[str, str]],
-        strategy: StrategyName,
-        selected_models: Optional[List[Tuple[str, str]]],
-        max_iterations: int,
-        interactive: bool,
-        timeout: int,
+        strategy: StrategyName = StrategyName.ROUND_ROBIN,
+        selected_models: Optional[List[Tuple[str, str]]] = None,
+        max_iterations: int = 3,
+        interactive: bool = True,
+        timeout: int = 30,
     ):
         self.timeout = timeout # timeout for API calls
         self.max_iterations = max_iterations # max iterations for refinement
