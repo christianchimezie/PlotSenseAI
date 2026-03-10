@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest:*)",
+      "Bash(.venvScriptspython -m pytest --co -q)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run flake8:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run bandit:*)"
+    ]
+  }
+}
