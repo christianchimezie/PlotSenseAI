@@ -26,8 +26,6 @@ Common plots include:
 
 Bar charts
 
-Pie charts
-
 Boxplots (categorical vs numerical)
 
 PlotSense automatically suggests appropriate plots based on the dataset structure.
@@ -79,14 +77,9 @@ PlotSense works best with Python 3.9 or later. Earlier versions may cause depend
 The ensemble score reflects how strongly the models agree on a visualization suggestion.
 Higher scores indicate stronger agreement between models.
 
-11. Can I use PlotSense in Jupyter Notebook?
+11. Can PlotSense generate plots without recommendations?
 
-Yes. PlotSense works well inside Jupyter Notebook, Google Colab, and Python scripts.
-
-Example:
-
-recommendation = recommender(df)
-fig = plotgen(df, 0, recommendation)
+No. PlotSense requires recommendations first.
 
 12. What happens if the API request fails?
 
@@ -122,3 +115,9 @@ Example:
 
 recommendation = recommender(df)
 fig = plotgen(df, 0, recommendation)
+
+16. Can PlotSense work offline?
+
+Currently no.
+
+PlotSense requires internet access because it queries LLM models hosted on Groq.
