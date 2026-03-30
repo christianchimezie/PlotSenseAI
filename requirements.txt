@@ -7,7 +7,7 @@ plotsense
 groq
 openai
 anthropic
-google-genai
+google-genai>=1.69.0
 
 # Environment
 python-dotenv

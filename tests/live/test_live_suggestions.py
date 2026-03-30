@@ -50,10 +50,7 @@ class TestLiveRecommendationGeneration:
         )
         recommender.set_dataframe(sample_dataframe)
 
-        recs = recommender.recommend_visualizations(
-            n=2,
-            selected_models=[("openai", "gpt-4.1")]
-        )
+        recs = recommender.recommend_visualizations(n=2)
 
         assert recs is not None
         assert isinstance(recs, pd.DataFrame)

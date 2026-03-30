@@ -41,7 +41,7 @@ setup(
         "groq",
         "anthropic",
         "openai",
-        "google-genai",
+        "google-genai>=1.69.0",
         "requests",
         "Pillow>=9.0.0",
     ],

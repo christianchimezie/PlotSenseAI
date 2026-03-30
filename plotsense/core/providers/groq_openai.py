@@ -4,8 +4,12 @@ from openai import OpenAI
 from .base import LLMProvider
 
 
-class GroqProvider(LLMProvider):
-    """Provider for Groq models using the unified OpenAI SDK interface."""
+class GroqOpenAIProvider(LLMProvider):
+    """Provider for Groq models using the OpenAI-compatible SDK interface.
+    
+    This variant uses Groq's OpenAI-compatible API endpoint, allowing use
+    of the OpenAI SDK with Groq's infrastructure.
+    """
 
     LINK = "👉 https://console.groq.com/keys 👈"
 
