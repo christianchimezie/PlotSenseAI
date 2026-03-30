@@ -15,4 +15,7 @@ dependencies:
   - pip:
     - plotsense
     - groq
+    - openai
+    - anthropic
+    - google-genai>=1.69.0
     - python-dotenv

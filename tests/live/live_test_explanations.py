@@ -12,7 +12,7 @@ ax.plot([1, 2, 3], [4, 5, 6])
 # Load API keys from environment
 api_keys = {
     "groq": os.getenv("GROQ_API_KEY"),
-    "openai": os.getenv("OPENAI_API_KEY")
+    # "openai": os.getenv("OPENAI_API_KEY")
 }
 
 # Run explainer
@@ -20,6 +20,6 @@ result = explainer(
     fig,
     prompt="Explain this simple line plot",
     api_keys=api_keys,
-    selected_models=[("openai", "gpt-4.1")],
+    # selected_models=[("openai", "gpt-4.1")],
 )
 print(result)

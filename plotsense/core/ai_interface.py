@@ -141,24 +141,27 @@ class AIModelInterface:
         """
         Query a model via the provider manager.
         Handles provider-specific formatting and error management.
+        
+        Provider names follow vendor_variant format (e.g., groq_default, openai_chat).
+        We extract the vendor to determine message formatting.
         """
         if provider not in self.manager.providers:
             raise ValueError(f"Unknown provider: {provider}")
 
         try:
-            # Build messages depending on provider/model
+            # Extract vendor from provider name (e.g., "groq_default" -> "groq")
+            vendor = provider.split("_")[0].lower()
+            
+            # Build messages depending on vendor (determines message format)
             messages = self._build_messages(
-                provider, model, prompt, base64_image
+                vendor, model, prompt, base64_image
             )
             generation_params = {"temperature": 0.7, "max_tokens": 1000, **(custom_parameters or {})}
 
-            provider_lower = provider.lower()
-            # model_lower = model.lower()
-
             # -------------------- OPENAI (Chat + Response) --------------------
-            if "openai" in provider_lower:
+            if vendor == "openai":
                 # if "gpt" in model_lower or "chat" in model_lower:
-                if "chat" in provider_lower:
+                if "chat" in provider.lower():
                     # Chat-based models (GPT-4, GPT-3.5, etc.)
                     return self.manager.query(
                         provider,
@@ -167,7 +170,7 @@ class AIModelInterface:
                         prompt=prompt,
                         **generation_params,
                     )
-                elif "response" in provider_lower:
+                elif "response" in provider.lower():
                     # Response-based models (completion endpoints)
                     return self.manager.query(
                         provider,
@@ -177,7 +180,7 @@ class AIModelInterface:
                     )
 
             # -------------------- AZURE OPENAI --------------------
-            elif "azure" in provider_lower:
+            elif vendor == "azure":
                 # Azure follows OpenAI's API style but requires deployment-specific name
                 return self.manager.query(
                     provider,
@@ -188,7 +191,7 @@ class AIModelInterface:
                 )
 
             # -------------------- GROQ --------------------
-            elif "groq" in provider_lower:
+            elif vendor == "groq":
                 # Typically text-only Llama-style models
                 return self.manager.query(
                     provider,
@@ -199,7 +202,7 @@ class AIModelInterface:
                 )
 
             # -------------------- ANTHROPIC --------------------
-            elif "anthropic" in provider_lower:
+            elif vendor == "anthropic":
                 # Claude models (text + multimodal optional)
                 return self.manager.query(
                     provider,
@@ -210,7 +213,7 @@ class AIModelInterface:
                 )
 
             # -------------------- GEMINI --------------------
-            elif "gemini" in provider_lower:
+            elif vendor == "gemini":
                 # Supports text + images
                 return self.manager.query(
                     provider,
@@ -222,7 +225,7 @@ class AIModelInterface:
                 )
 
             # -------------------- OLLAMA --------------------
-            elif "ollama" in provider_lower:
+            elif vendor == "ollama":
                 # Local models; prompt only, may support images if model allows
                 return self.manager.query(
                     provider,
@@ -247,8 +250,6 @@ class AIModelInterface:
         except Exception as e:
             warnings.warn(f"[AIModelInterface] Querying error for {provider}:{model} -> {str(e)}")
             return f"Error: {e}"
-        finally:
-            return f"Error: No valid query handler found for provider '{provider}'."
 
     def get_model_weights(self) -> Dict[str, float]:
         """
@@ -316,19 +317,26 @@ class AIModelInterface:
         return normalized
 
     def _build_messages(
-        self, provider: str, model: str, prompt: str,
+        self, vendor: str, model: str, prompt: str,
         base64_image: Optional[str] = None
     ):
         """
-        Build messages dynamically based on provider capabilities.
+        Build messages dynamically based on vendor capabilities.
         Supports multimodal input where possible (OpenAI GPT-4o, Gemini, Anthropic, etc.).
-        Falls back to text-only prompt for providers without image support.
+        Falls back to text-only prompt for vendors without image support.
+        
+        Args:
+            vendor: The vendor name (e.g., "groq", "openai", "anthropic")
+                   Extracted from full provider names like "groq_default", "openai_chat"
+            model: The model name
+            prompt: The text prompt
+            base64_image: Optional base64-encoded image
         """
-        provider_lower = provider.lower()
+        vendor_lower = vendor.lower()
         model_lower = model.lower()
 
         # --- 1️⃣ OpenAI / Azure (GPT-4, GPT-4o, GPT-3.5 etc.) ---
-        if provider_lower in {"openai", "azure"}:
+        if vendor_lower in {"openai", "azure"}:
             if base64_image and any(tag in model_lower for tag in ["gpt-4o", "gpt-4-turbo", "gpt-4-vision"]):
                 # Chat message with multimodal support
                 return [
@@ -348,7 +356,7 @@ class AIModelInterface:
                 ]
 
         # --- 2️⃣ Anthropic (Claude) ---
-        elif provider_lower == "anthropic":
+        elif vendor_lower == "anthropic":
             # Claude supports multimodal via text + image blocks in messages
             if base64_image:
                 return [
@@ -366,7 +374,7 @@ class AIModelInterface:
                 ]
 
         # --- 3️⃣ Gemini (Google) ---
-        elif provider_lower == "gemini":
+        elif vendor_lower == "gemini":
             # Gemini API supports multimodal via a combined structure
             if base64_image:
                 return [
@@ -384,13 +392,13 @@ class AIModelInterface:
                 ]
 
         # --- 4️⃣ Groq (LLaMA / Mistral etc. – text-only) ---
-        elif provider_lower == "groq":
+        elif vendor_lower == "groq":
             return [
                 {"role": "user", "content": prompt}
             ]
 
         # --- 5️⃣ Ollama (local models; may support image, but prompt-based) ---
-        elif provider_lower == "ollama":
+        elif vendor_lower == "ollama":
             if base64_image:
                 # Send inline text prompt mentioning image context
                 return [
