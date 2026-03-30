@@ -407,7 +407,13 @@ class SmartPlotGenerator(PlotGenerator):
 
         # Check data types
         for var in variables[:2]:  # x and y must be numeric
-            if not np.issubdtype(self.data[var].dtype, np.number):
+            try:
+                is_numeric = np.issubdtype(self.data[var].dtype, np.number)
+            except TypeError:
+                # Handle StringDtype and other pandas types that np.issubdtype can't parse
+                is_numeric = pd.api.types.is_numeric_dtype(self.data[var])
+
+            if not is_numeric:
                 raise ValueError(f"Variable '{var}' must be numeric")
 
         fig, ax = plt.subplots()
