@@ -60,44 +60,69 @@ npm test
 
 ### Framework and Tools
 
-- **Test Runner**: pytest 8.3+
+- **Test Runner**: pytest 7.0+
 - **Coverage**: pytest-cov
 - **Mocking**: pytest-mock, unittest.mock
 - **Configuration**: `pytest.ini`, `pyproject.toml`, `.coveragerc`
 
 ### Test Structure
 
+The test suite is organized into three categories:
+
 ```
-test/
-├── conftest.py              # Shared fixtures and configuration
-├── test_plotgen.py          # Plot generation tests (291 lines)
-├── test_explanations.py     # Explanation generation tests (378 lines)
-└── test_suggestions.py      # Visualization recommendation tests (285 lines)
+tests/
+├── conftest.py                           # Shared fixtures and configuration
+├── unit/                                 # Fast, isolated unit tests (mocked APIs)
+│   ├── conftest.py                       # Unit test specific fixtures
+│   ├── test_exceptions.py                # Exception handling tests
+│   ├── test_plot_generator.py            # Plot generation unit tests
+│   ├── test_explanations_unit.py         # PlotExplainer unit tests (mocked)
+│   └── test_suggestions_unit.py          # VisualizationRecommender unit tests (mocked)
+├── integration/                          # Integration tests (component interaction)
+│   ├── conftest.py                       # Integration test fixtures
+│   └── (currently placeholder)
+└── live/                                 # Live tests (real API calls)
+    ├── conftest.py                       # Live test fixtures
+    ├── test_live_suggestions.py          # Real Groq/OpenAI API tests
+    └── test_live_explanations.py         # Real Groq/OpenAI API tests
 ```
+
+**Test Coverage**:
+- **Unit Tests**: 56 tests covering core functionality with mocked APIs
+- **Live Tests**: 5 tests requiring real API keys (Groq, OpenAI)
 
 ### Running Python Tests
 
 ```bash
-# Run all tests
+# Run all tests (unit and integration only, live tests skipped)
 pytest
+
+# Run only non-live tests (same as above)
+pytest -m "not live"
+
+# Run only live tests (requires GROQ_API_KEY and OPENAI_API_KEY)
+pytest -m live
+
+# Run only unit tests
+pytest tests/unit
 
 # Run with coverage
 pytest --cov=plotsense --cov-report=html
 
 # Run specific test file
-pytest test/test_plotgen.py
+pytest tests/unit/test_plot_generator.py
 
 # Run specific test class
-pytest test/test_plotgen.py::TestPlotFunctions
+pytest tests/unit/test_plot_generator.py::TestPlotFunctions
 
 # Run specific test
-pytest test/test_plotgen.py::TestPlotFunctions::test_create_scatter
+pytest tests/unit/test_plot_generator.py::TestPlotFunctions::test_create_scatter
 
 # Run tests by marker
 pytest -m unit                  # Fast unit tests only
 pytest -m integration          # Integration tests only
-pytest -m "not slow"           # Exclude slow tests
-pytest -m api                  # Tests that use API mocks
+pytest -m "not live"           # All tests except live (default)
+pytest -m live                 # Only live tests
 
 # Verbose output with details
 pytest -v
@@ -116,25 +141,30 @@ pytest -n auto
 
 Tests are organized with markers for selective execution:
 
-- `@pytest.mark.unit`: Fast, isolated unit tests
+- `@pytest.mark.unit`: Fast, isolated unit tests (mocked APIs)
 - `@pytest.mark.integration`: Tests that combine multiple components
 - `@pytest.mark.e2e`: End-to-end workflow tests
 - `@pytest.mark.slow`: Tests that take significant time
 - `@pytest.mark.api`: Tests that mock external API calls
 - `@pytest.mark.requires_api_key`: Tests requiring valid credentials
 - `@pytest.mark.plotting`: Tests that generate visualizations
+- `@pytest.mark.live`: Live tests requiring real API keys and actual API calls (opt-in)
 
 ### Shared Fixtures
 
-The `test/conftest.py` file provides shared fixtures:
+The `tests/conftest.py` file provides shared fixtures:
 
+- `test_api_key`: Test API key from environment
 - `sample_dataframe`: Standard 100-row DataFrame for testing
 - `small_dataframe`: 20-row DataFrame for quick tests
 - `large_dataframe`: 1000-row DataFrame for performance tests
 - `sample_suggestions`: Mock visualization suggestions
-- `simple_plot`, `sample_plot`: Matplotlib plot fixtures
+- `simple_plot`, `sample_plot`, `scatter_plot`, `bar_plot`: Matplotlib plot fixtures
 - `mock_groq_client`: Mocked Groq API client
+- `mock_groq_completion`: Mocked Groq completion response
 - `temp_image_path`: Temporary image file for testing
+- `reset_matplotlib`: Auto-use fixture that closes all plots after each test
+- `reset_random_seed`: Auto-use fixture that resets NumPy seed for reproducibility
 
 ### Example Test
 
@@ -224,34 +254,38 @@ describe('Button', () => {
 
 ### Test Types
 
-1. **Unit Tests**
+1. **Unit Tests** (`tests/unit/`)
    - Test individual functions/components in isolation
    - Fast execution (< 100ms per test)
-   - No external dependencies
-   - Example: Testing a single plot generation function
+   - All external APIs are mocked
+   - No real API calls
+   - Example: Testing plot generation, exception handling
 
-2. **Integration Tests**
+2. **Integration Tests** (`tests/integration/`)
    - Test interaction between components
    - May use mocked external services
    - Example: Testing recommendation → plot generation flow
 
-3. **End-to-End Tests**
-   - Test complete workflows
-   - Closer to real-world usage
-   - Example: Generate recommendations, create plot, explain results
-
-4. **Performance Tests**
-   - Test with large datasets (marked as `@pytest.mark.slow`)
-   - Verify resource usage
-   - Example: Testing with 1000+ row DataFrames
+3. **Live Tests** (`tests/live/`)
+   - Test with real API calls (Groq, OpenAI)
+   - Require valid API credentials (GROQ_API_KEY, OPENAI_API_KEY)
+   - Skipped by default with `pytest`
+   - Run explicitly with `pytest -m live`
+   - Example: Real end-to-end workflow with actual API calls
 
 ## Running Tests
 
 ### Local Development
 
 ```bash
-# Python: Run fast tests during development
-pytest -m "not slow" --tb=short
+# Python: Run fast unit tests during development
+pytest tests/unit
+
+# Python: Run all non-live tests
+pytest -m "not live"
+
+# Python: Watch mode (requires pytest-watch)
+ptw tests/unit
 
 # Frontend: Run in watch mode
 cd web && npm test -- --watch
@@ -289,14 +323,20 @@ class TestFeatureName:
 
     @pytest.mark.unit
     def test_basic_functionality(self, sample_dataframe):
-        """Test basic use case."""
+        """Test basic use case (runs by default)."""
         result = function_to_test(sample_dataframe)
         assert result is not None
 
     @pytest.mark.integration
     def test_integration_scenario(self, mock_groq_client):
-        """Test integration with external service."""
+        """Test integration with mocked external service."""
         # Test implementation
+        pass
+
+    @pytest.mark.live
+    def test_real_api_call(self, sample_dataframe):
+        """Test with real API call (opt-in via pytest -m live)."""
+        # This requires real API keys
         pass
 
     def test_error_handling(self):
@@ -304,6 +344,12 @@ class TestFeatureName:
         with pytest.raises(ValueError):
             function_to_test(invalid_input)
 ```
+
+**Key Points:**
+- By default, unit and integration tests run: `pytest`
+- Live tests are skipped by default
+- To run live tests: `pytest -m live` (requires API keys)
+- To exclude live tests explicitly: `pytest -m "not live"`
 
 ### Frontend Test Template
 
@@ -490,10 +536,16 @@ npm run test:ui
 When adding new features:
 
 1. Write tests for new functionality
-2. Ensure all tests pass: `pytest && cd web && npm test`
-3. Check coverage: Aim for 80%+ on new code
-4. Run pre-commit hooks: `pre-commit run --all-files`
-5. Update this document if adding new test patterns
+2. Place unit tests in `tests/unit/` with `@pytest.mark.unit` or no marker
+3. Place integration tests in `tests/integration/` with `@pytest.mark.integration`
+4. Place live API tests in `tests/live/` with `@pytest.mark.live`
+5. Ensure all tests pass:
+   - `pytest` - runs unit and integration tests
+   - `pytest -m live` - runs live tests (requires API keys)
+6. Check coverage: Aim for 80%+ on new code
+   - `pytest --cov=plotsense --cov-report=html`
+7. Run pre-commit hooks: `pre-commit run --all-files`
+8. Update this document if adding new test patterns
 
 ---
 
