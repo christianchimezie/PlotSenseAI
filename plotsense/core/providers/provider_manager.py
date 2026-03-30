@@ -8,6 +8,7 @@ from plotsense.core.providers.ollama_openai import OllamaProvider
 from plotsense.core.providers.openai_chat import OpenAIChatProvider
 from plotsense.core.utils import prompt_for_api_key
 from .groq import GroqProvider
+from .groq_openai import GroqOpenAIProvider
 from .openai_response import OpenAIResponseProvider
 
 
@@ -17,6 +18,7 @@ class ProviderManager:
     SUPPORTED_PROVIDERS: Dict[str, Dict[str, Type[LLMProvider]]] = {
         "groq": {
             "default": GroqProvider,
+            "openai": GroqOpenAIProvider,
         },
         "openai": {
             "chat": OpenAIChatProvider,
@@ -60,35 +62,41 @@ class ProviderManager:
         self._init_providers()
 
     def _init_providers(self):
-        """Initialize all registered providers and validate their API keys."""
-        for vendor_name, variants in self.SUPPORTED_PROVIDERS.items():
-            # Skip if restrict_to is provided and this vendor isn’t included
-            if self.restrict_to and vendor_name not in self.restrict_to:
+        """Initialize providers that have API keys supplied.
+        
+        DESIGN PRINCIPLE: api_keys determines which providers are AVAILABLE for use.
+        Only initialize providers that have a key in api_keys.
+        Do NOT prompt for or validate providers that weren't explicitly provided.
+        """
+        # Determine which providers to initialize
+        # Start with providers that have keys in api_keys
+        providers_to_init = set(self.api_keys.keys())
+        
+        if self.restrict_to:
+            # If restrict_to is specified, ensure all requested providers have keys
+            missing_keys = self.restrict_to - providers_to_init
+            if missing_keys:
+                raise ValueError(
+                    f"Selected models require provider(s) {missing_keys} but no API key(s) provided. "
+                    f"Supply their keys via api_keys dict."
+                )
+            providers_to_init = self.restrict_to
+        
+        # Only iterate through providers that we have keys for
+        for vendor_name in providers_to_init:
+            if vendor_name not in self.SUPPORTED_PROVIDERS:
+                raise ValueError(f"Unknown provider: {vendor_name}")
+                
+            variants = self.SUPPORTED_PROVIDERS[vendor_name]
+            api_key = self.api_keys[vendor_name]
+            
+            if not isinstance(api_key, str) or not api_key.strip():
+                print(f"⚠️ Skipping {vendor_name.upper()} due to invalid API key format.")
                 continue
 
             for variant_name, provider_cls in variants.items():
                 full_name = f"{vendor_name}_{variant_name}"
                 link = getattr(provider_cls, "LINK", f"https://{vendor_name}.com")
-
-                api_key: Optional[str] = self.api_keys.get(vendor_name)
-                if not api_key:
-                    # Try to prompt only if interactive and not restricted
-                    api_key = prompt_for_api_key(
-                        vendor_name,
-                        link,
-                        self.interactive,
-                        skip_if_missing=bool(self.restrict_to),
-                    )
-                    if not api_key:
-                        # Skip this provider if key is still missing
-                        print(f"⏩ Skipping {full_name.upper()} (no API key provided).")
-                        continue
-
-                    self.api_keys[vendor_name] = api_key
-
-                if not isinstance(api_key, str) or not api_key.strip():
-                    print(f"⚠️ Skipping {full_name.upper()} due to invalid API key format.")
-                    continue
 
                 provider = provider_cls(api_key=api_key)
 
@@ -100,6 +108,7 @@ class ProviderManager:
                         print(f"❌ {full_name.upper()} API key invalid or unverified.")
                 except Exception as e:
                     print(f"⚠️  Error validating {full_name.upper()} API key: {e}")
+
 
     def get_provider(self, vendor_name: str, variant_name: str = ""):
         """

@@ -38,6 +38,9 @@ dependencies = [
     "numpy>=1.18",
     "python-dotenv",
     "groq",
+    "openai",
+    "anthropic",
+    "google-genai>=1.69.0",
     "requests",
     "Pillow>=9.0.0",
 ]
@@ -66,29 +69,39 @@ Issues = "https://github.com/christianchimezie/PlotSenseAI/issues"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["test"]
+testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "-v",
     "-ra",
+    "--showlocals",
     "--strict-markers",
     "--strict-config",
+    "-W", "default",
+    "--durations=10",
 ]
 markers = [
     "unit: Unit tests (fast, isolated)",
-    "integration: Integration tests (test component interaction)",
-    "e2e: End-to-end tests (test full workflows)",
+    "integration: Integration tests (slower, test component interaction)",
+    "e2e: End-to-end tests (slowest, test full workflows)",
     "slow: Tests that take significant time to run",
     "api: Tests that make external API calls",
     "requires_api_key: Tests requiring valid API credentials",
     "plotting: Tests that generate visualizations",
+    "live: Live tests requiring real API keys and actual API calls",
 ]
 filterwarnings = [
     "ignore::UserWarning:plotsense.visual_suggestion",
     "ignore::DeprecationWarning:matplotlib",
+    "ignore::PendingDeprecationWarning",
 ]
+console_output_style = "progress"
+log_cli = false
+log_cli_level = "INFO"
+log_file = "test_logs/pytest.log"
+log_file_level = "DEBUG"
 
 [tool.coverage.run]
 source = ["plotsense"]
