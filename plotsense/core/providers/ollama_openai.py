@@ -23,8 +23,8 @@ class OllamaProvider(LLMProvider):
         if not self.client:
             # Default local Ollama endpoint
             self.client = OpenAI(
-                base_url="http://localhost:11434/v1", # Ollama’s OpenAI-compatible API
-                api_key=self.api_key or "ollama", # Dummy key for OpenAI client compatibility
+                base_url="http://localhost:11434/v1",  # Ollama’s OpenAI-compatible API
+                api_key=self.api_key or "ollama",  # Dummy key for OpenAI client compatibility
             )
 
     def query(self, prompt: str, model: str, **kwargs) -> str:
@@ -73,4 +73,3 @@ class OllamaProvider(LLMProvider):
             return bool(response)
         except Exception:
             return False
-

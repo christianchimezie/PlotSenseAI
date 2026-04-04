@@ -12,7 +12,7 @@ class CostOptimizedStrategy(Strategy):
 
         # Sort models by ascending cost (lowest first)
         self.model_list = sorted(
-            provider_models, 
+            provider_models,
             key=lambda p_m: self.cost_map.get(p_m[1], float("inf"))
         )
 
@@ -30,4 +30,3 @@ class CostOptimizedStrategy(Strategy):
             raise ValueError("No models available in strategy.")
         index = min(iteration, len(self.model_list) - 1)
         return self.model_list[index]
-

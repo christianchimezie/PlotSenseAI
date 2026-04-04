@@ -7,7 +7,7 @@ from ..registry_loader import get_registry_loader
 
 class GroqOpenAIProvider(LLMProvider):
     """Provider for Groq models using the OpenAI-compatible SDK interface.
-    
+
     This variant uses Groq's OpenAI-compatible API endpoint, allowing use
     of the OpenAI SDK with Groq's infrastructure.
     """
@@ -74,4 +74,3 @@ class GroqOpenAIProvider(LLMProvider):
             return bool(response)
         except Exception:
             return False
-

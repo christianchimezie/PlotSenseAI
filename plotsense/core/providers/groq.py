@@ -7,7 +7,7 @@ from ..registry_loader import get_registry_loader
 
 class GroqProvider(LLMProvider):
     """Provider integration for Groq's fast inference API."""
-    
+
     LINK = "👉 https://console.groq.com/keys 👈"
 
     def __init__(self, api_key: str):

@@ -8,7 +8,6 @@ import warnings
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import textwrap
-import builtins
 import getpass
 from pprint import pprint
 from groq import Groq
@@ -326,6 +325,58 @@ class VisualizationRecommender:
                     f"\n[ERROR] Failed to parse response from {model}: {str(e)}")
             return []
 
+    def _process_recommendation_from_model(
+        self, rec: Dict, valid_vars: List[str],
+        model: str, model_weight: float,
+        recommendation_weights: Dict,
+        recommendation_details: Dict
+    ):
+        var_key = ', '.join(sorted(valid_vars))
+        rec_key = (rec['plot_type'].lower(), var_key)
+        model_score = rec.get('score', 1.0)
+        total_weight = model_weight * model_score
+        recommendation_weights[rec_key] += total_weight
+
+        if rec_key not in recommendation_details:
+            recommendation_details[rec_key] = {
+                'plot_type': rec['plot_type'],
+                'variables': var_key,
+                'source_models': [model],
+                'raw_weight': total_weight
+            }
+        else:
+            recommendation_details[rec_key]['source_models'].append(model)
+            recommendation_details[rec_key]['raw_weight'] += total_weight
+
+    def _collect_recommendations_from_models(self, all_recommendations: Dict[str, List[Dict]],
+                                             weights: Dict[str, float]) -> Dict:
+        """Collect recommendations from all models."""
+        recommendation_weights = defaultdict(float)
+        recommendation_details = {}
+
+        for model, recs in all_recommendations.items():
+            model_weight = weights.get(model, 0)
+            if model_weight <= 0:
+                continue
+
+            for rec in recs:
+                variables = rec['variables']
+                if isinstance(variables, str):
+                    variables = [v.strip() for v in variables.split(',')]
+
+                valid_vars = [var for var in variables if var in self.df.columns]
+                if not valid_vars:
+                    if self.debug:
+                        print(f"\n[DEBUG] Skipping recommendation from {model} with invalid variables: {variables}")
+                    continue
+
+                self._process_recommendation_from_model(
+                    rec, valid_vars, model, model_weight,
+                    recommendation_weights, recommendation_details
+                )
+
+        return recommendation_details
+
     def _apply_ensemble_scoring(self,
                                 all_recommendations: Dict[str,
                                                           List[Dict]],
@@ -338,47 +389,9 @@ class VisualizationRecommender:
             print("\n[DEBUG] Applying ensemble scoring with weights:")
             pprint(weights)
 
-        recommendation_weights = defaultdict(float)
-        recommendation_details = {}
-
-        for model, recs in all_recommendations.items():
-            model_weight = weights.get(model, 0)
-            if model_weight <= 0:
-                continue
-
-            for rec in recs:
-                # Create a consistent key for the recommendation
-                variables = rec['variables']
-                if isinstance(variables, str):
-                    variables = [v.strip() for v in variables.split(',')]
-
-                # Filter variables to only those in the DataFrame
-                valid_vars = [
-                    var for var in variables if var in self.df.columns]
-                if not valid_vars:
-                    if self.debug:
-                        print(
-                            f"\n[DEBUG] Skipping recommendation from {model} with invalid variables: {variables}")
-                    continue
-
-                var_key = ', '.join(sorted(valid_vars))
-                rec_key = (rec['plot_type'].lower(), var_key)
-
-                model_score = rec.get('score', 1.0)
-                total_weight = model_weight * model_score
-                recommendation_weights[rec_key] += total_weight
-
-                if rec_key not in recommendation_details:
-                    recommendation_details[rec_key] = {
-                        'plot_type': rec['plot_type'],
-                        'variables': var_key,
-                        'source_models': [model],
-                        'raw_weight': total_weight
-                    }
-                else:
-                    recommendation_details[rec_key]['source_models'].append(
-                        model)
-                    recommendation_details[rec_key]['raw_weight'] += total_weight
+        recommendation_details = self._collect_recommendations_from_models(
+            all_recommendations, weights
+        )
 
         if not recommendation_details:
             if self.debug:

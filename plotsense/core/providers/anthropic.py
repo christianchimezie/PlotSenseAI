@@ -6,7 +6,7 @@ from ..registry_loader import get_registry_loader
 
 class AnthropicProvider(LLMProvider):
     """Provider integration for Anthropic's Claude models."""
-    
+
     LINK = "👉 https://console.anthropic.com/account/keys 👈"
 
     def __init__(self, api_key: str):
@@ -67,4 +67,3 @@ class AnthropicProvider(LLMProvider):
             return True
         except Exception:
             return False
-
