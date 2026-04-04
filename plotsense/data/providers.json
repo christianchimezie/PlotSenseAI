@@ -1,0 +1,141 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-04-04",
+  "providers": {
+    "groq": {
+      "name": "Groq",
+      "variants": {
+        "default": {
+          "displayName": "Groq (Native API)",
+          "models": [
+            "llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile",
+            "mixtral-8x7b-32768"
+          ]
+        },
+        "openai": {
+          "displayName": "Groq (OpenAI-Compatible)",
+          "models": [
+            "llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile",
+            "mixtral-8x7b-32768"
+          ]
+        }
+      }
+    },
+    "openai": {
+      "name": "OpenAI",
+      "variants": {
+        "chat": {
+          "displayName": "OpenAI Chat",
+          "models": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo"
+          ]
+        },
+        "response": {
+          "displayName": "OpenAI Response",
+          "models": [
+            "gpt-4o",
+            "gpt-4o-mini"
+          ]
+        }
+      }
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "variants": {
+        "default": {
+          "displayName": "Anthropic Claude",
+          "models": [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-haiku-20240307"
+          ]
+        }
+      }
+    },
+    "gemini": {
+      "name": "Google Gemini",
+      "variants": {
+        "default": {
+          "displayName": "Google Gemini",
+          "models": [
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash"
+          ]
+        }
+      }
+    },
+    "azure": {
+      "name": "Azure OpenAI",
+      "variants": {
+        "default": {
+          "displayName": "Azure OpenAI",
+          "models": [
+            "azure-gpt-4o",
+            "azure-gpt-4o-mini"
+          ]
+        }
+      }
+    },
+    "ollama": {
+      "name": "Ollama",
+      "variants": {
+        "default": {
+          "displayName": "Ollama (Local)",
+          "models": [
+            "llama3",
+            "mistral",
+            "neural-chat"
+          ]
+        }
+      }
+    }
+  },
+  "modelMetadata": {
+    "costs": {
+      "gpt-4o": 0.03,
+      "gpt-4o-mini": 0.01,
+      "gpt-4-turbo": 0.025,
+      "gpt-3.5-turbo": 0.008,
+      "llama-3.1-8b-instant": 0.005,
+      "llama-3.3-70b-versatile": 0.02,
+      "mixtral-8x7b-32768": 0.015,
+      "claude-3-5-sonnet-20241022": 0.02,
+      "claude-3-opus-20240229": 0.05,
+      "claude-3-haiku-20240307": 0.009,
+      "gemini-1.5-pro": 0.02,
+      "gemini-1.5-flash": 0.006,
+      "gemini-2.0-flash": 0.018,
+      "azure-gpt-4o": 0.031,
+      "azure-gpt-4o-mini": 0.011,
+      "llama3": 0.001,
+      "mistral": 0.002,
+      "neural-chat": 0.0015
+    },
+    "performance": {
+      "gpt-4o": 10.0,
+      "gpt-4o-mini": 8.5,
+      "gpt-4-turbo": 9.5,
+      "gpt-3.5-turbo": 7.5,
+      "claude-3-5-sonnet-20241022": 9.0,
+      "claude-3-opus-20240229": 9.8,
+      "claude-3-haiku-20240307": 7.0,
+      "llama-3.3-70b-versatile": 8.8,
+      "llama-3.1-8b-instant": 6.5,
+      "mixtral-8x7b-32768": 7.8,
+      "gemini-1.5-pro": 9.3,
+      "gemini-1.5-flash": 7.8,
+      "gemini-2.0-flash": 8.5,
+      "azure-gpt-4o": 9.8,
+      "azure-gpt-4o-mini": 8.3,
+      "mistral": 6.0,
+      "llama3": 6.8,
+      "neural-chat": 6.5
+    }
+  }
+}
