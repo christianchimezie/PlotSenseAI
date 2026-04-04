@@ -2,6 +2,7 @@ from typing import List, Optional
 from openai import OpenAI
 from openai.types.chat import ChatCompletionUserMessageParam
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class OpenAIChatProvider(LLMProvider):
@@ -50,13 +51,9 @@ class OpenAIChatProvider(LLMProvider):
             raise RuntimeError(f"OpenAI chat query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """Return a curated list of supported OpenAI chat models."""
-        return [
-            "gpt-4o-mini",
-            "gpt-4.1",
-            "gpt-4-turbo",
-            "gpt-4o",
-        ]
+        """Return list of supported OpenAI chat models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("openai", "chat")
 
     def validate_key(self) -> bool:
         """

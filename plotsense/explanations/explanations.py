@@ -31,12 +31,13 @@ class PlotExplainer:
         self.interactive = interactive
         self.strategy_name = strategy # strategy for provider selection
 
+        # selected_models is the source of truth for provider selection
         selected_providers = {p for p, _ in (selected_models or [])}
 
         self.manager = ProviderManager(
             api_keys=api_keys or {},
             interactive=interactive,
-            restrict_to=list(selected_providers) if selected_providers else None
+            selected_providers=list(selected_providers) if selected_providers else None
         )
         self.ai_interface = AIModelInterface(self.manager, timeout=self.timeout)
 
@@ -48,9 +49,52 @@ class PlotExplainer:
         ]
 
         if selected_models:
-            selected_set = set(selected_models)
+            # Expand vendor-level selections to include all variants
+            # E.g., ("openai", "gpt-4o-mini") should match both:
+            # - ("openai_chat", "gpt-4o-mini")
+            # - ("openai_response", "gpt-4o-mini")
+            expanded_selected = set()
+            unsupported_models = {}  # Track which models aren't in registry
+            
+            for vendor, model in selected_models:
+                # Check if vendor has variants (contains underscore in available_models)
+                vendor_variants = {
+                    prov for prov, _ in self.available_models
+                    if prov.startswith(vendor + "_") or prov == vendor
+                }
+                
+                if not vendor_variants:
+                    # Vendor not available at all
+                    raise ValueError(
+                        f"Provider '{vendor}' is not initialized or has no available variants. "
+                        f"Check that you have a valid API key for '{vendor}'."
+                    )
+                
+                # Check if model is supported by this vendor
+                supported_models = {
+                    m for prov, m in self.available_models 
+                    if prov.startswith(vendor + "_") or prov == vendor
+                }
+                
+                if model not in supported_models:
+                    unsupported_models[vendor] = (model, sorted(supported_models))
+                
+                for variant in vendor_variants:
+                    expanded_selected.add((variant, model))
+            
+            # If any models are unsupported, raise clear error
+            if unsupported_models:
+                error_lines = ["Unsupported model(s) requested:"]
+                for vendor, (requested, supported) in unsupported_models.items():
+                    error_lines.append(
+                        f"\n  Provider '{vendor}': model '{requested}' not found."
+                        f"\n  Supported models: {', '.join(supported[:3])}"
+                        + (f", ... ({len(supported)} total)" if len(supported) > 3 else "")
+                    )
+                raise ValueError("\n".join(error_lines))
+            
             self.available_models = [
-                pair for pair in self.available_models if pair in selected_set
+                pair for pair in self.available_models if pair in expanded_selected
             ]
 
         if not self.available_models:
