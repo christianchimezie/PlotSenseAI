@@ -2,6 +2,7 @@ from typing import List, Optional
 from google import genai
 from google.genai.types import GenerateContentConfig
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class GeminiProvider(LLMProvider):
@@ -65,14 +66,9 @@ class GeminiProvider(LLMProvider):
             raise RuntimeError(f"Gemini query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """
-        Return a curated list of Gemini models.
-        """
-        return [
-            "gemini-2.5-flash",
-            "gemini-2.0-pro",
-            "gemini-1.5-flash",
-        ]
+        """Return list of supported Gemini models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("gemini", "default")
 
     def validate_key(self) -> bool:
         """

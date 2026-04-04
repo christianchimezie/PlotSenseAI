@@ -12,19 +12,21 @@ df = pd.DataFrame({
     "Profit": [40, 50, 65, 80]
 })
 
-# Load API keys from environment
-api_keys = {
-    "groq": os.getenv("GROQ_API_KEY"),
-    "openai": os.getenv("OPENAI_API_KEY"),
-    "azure": os.getenv("AZURE_API_KEY"),
-}
+# Load API keys from environment (only include if present)
+api_keys = {}
+if os.getenv("GROQ_API_KEY"):
+    api_keys["groq"] = os.getenv("GROQ_API_KEY")
+if os.getenv("OPENAI_API_KEY"):
+    api_keys["openai"] = os.getenv("OPENAI_API_KEY")
+if os.getenv("AZURE_API_KEY"):
+    api_keys["azure"] = os.getenv("AZURE_API_KEY")
 
 # Run the recommender
 recommendations = recommender(
     df,
     n=3,  # number of visualizations to recommend
     api_keys=api_keys,
-    selected_models=[("openai", "gpt-5")],
+    # selected_models=[("openai", "gpt-5")],
 )
 
 # Display the recommendations

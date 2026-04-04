@@ -64,11 +64,11 @@ class TestProviderInitialization:
                 'default': MagicMock(LINK='https://openai.com', validate_key=MagicMock(return_value=True))
             }
         }):
-            with pytest.raises(ValueError, match="Selected models require provider.*openai"):
+            with pytest.raises(ValueError, match="API key required for provider.*openai"):
                 ProviderManager(
                     api_keys={'groq': 'groq-key'},
                     interactive=False,
-                    restrict_to=['openai']  # openai has no key
+                    selected_providers=['openai']  # openai has no key
                 )
     
     def test_restrict_to_filters_available_providers(self):
@@ -82,7 +82,7 @@ class TestProviderInitialization:
             manager = ProviderManager(
                 api_keys={'groq': 'groq-key'},
                 interactive=False,
-                restrict_to=['groq']
+                selected_providers=['groq']
             )
             
             # Should successfully restrict to groq (which has a key)
@@ -92,31 +92,29 @@ class TestProviderInitialization:
 class TestEdgeCases:
     """Test edge cases and error conditions."""
     
-    def test_empty_api_keys_no_prompting(self, capsys):
-        """With empty api_keys and interactive=True, should not prompt or fail."""
+    def test_empty_api_keys_no_selected_providers_raises_error(self):
+        """With no api_keys and no selected_providers, should raise error."""
         with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {}):
-            manager = ProviderManager(
-                api_keys={},
-                interactive=True
-            )
-            
-            # Should complete without error even though no providers available
-            assert manager.providers == {}
+            with pytest.raises(ValueError, match="No providers selected and no API keys provided"):
+                ProviderManager(
+                    api_keys={},
+                    interactive=True,
+                    selected_providers=None
+                )
     
-    def test_invalid_api_key_format_skipped(self, capsys):
-        """Should skip providers with invalid key format."""
+    def test_selected_provider_with_empty_key_raises_error_non_interactive(self):
+        """Selected provider with empty key and non-interactive should raise error."""
         with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
             'groq': {
                 'default': MagicMock(LINK='https://groq.com', validate_key=MagicMock(return_value=True))
             }
         }):
-            manager = ProviderManager(
-                api_keys={'groq': ''},  # Empty key
-                interactive=False
-            )
-            
-            captured = capsys.readouterr()
-            assert 'skipping groq due to invalid' in captured.out.lower()
+            with pytest.raises(ValueError, match="API key required"):
+                ProviderManager(
+                    api_keys={'groq': ''},  # Empty key
+                    interactive=False,
+                    selected_providers=['groq']
+                )
     
     def test_unknown_provider_in_restrict_to_raises_error(self):
         """Should reject unknown providers in restrict_to."""
@@ -129,9 +127,107 @@ class TestEdgeCases:
                 ProviderManager(
                     api_keys={'groq': 'groq-key', 'unknown': 'key'},
                     interactive=False,
-                    restrict_to=['unknown']
+                    selected_providers=['unknown']
                 )
 
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestSelectedModelsSourceOfTruth:
+    """Test that selected_models determines provider selection, not api_keys."""
+    
+    def test_selected_models_without_keys_interactive_prompts(self):
+        """With selected_providers and no keys, should prompt interactively."""
+        with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
+            'groq': {
+                'default': MagicMock(LINK='https://groq.com', validate_key=MagicMock(return_value=True))
+            }
+        }):
+            with patch('plotsense.core.providers.provider_manager.prompt_for_api_key') as mock_prompt:
+                mock_prompt.return_value = 'gsk_provided'
+                
+                manager = ProviderManager(
+                    api_keys={},  # No keys
+                    interactive=True,
+                    selected_providers=['groq']
+                )
+                
+                # Should have called prompt
+                assert mock_prompt.called
+                # Should have initialized groq
+                assert 'groq_default' in manager.providers
+    
+    def test_api_keys_alone_ignored_when_selected_providers_given(self):
+        """When selected_providers is given, only those providers are initialized."""
+        with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
+            'groq': {
+                'default': MagicMock(LINK='https://groq.com', validate_key=MagicMock(return_value=True))
+            },
+            'openai': {
+                'chat': MagicMock(LINK='https://openai.com', validate_key=MagicMock(return_value=True))
+            }
+        }):
+            # Have groq key but select only openai -> should require openai key
+            with pytest.raises(ValueError, match="API key required.*openai"):
+                ProviderManager(
+                    api_keys={'groq': 'gsk_...'},  # groq key exists but not selected
+                    interactive=False,
+                    selected_providers=['openai']  # only openai selected
+                )
+    
+    def test_unselected_provider_never_prompted(self):
+        """Unselected providers should never be prompted for."""
+        with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
+            'groq': {
+                'default': MagicMock(LINK='https://groq.com', validate_key=MagicMock(return_value=True))
+            },
+            'openai': {
+                'chat': MagicMock(LINK='https://openai.com', validate_key=MagicMock(return_value=True))
+            }
+        }):
+            with patch('plotsense.core.providers.provider_manager.prompt_for_api_key') as mock_prompt:
+                mock_prompt.return_value = 'gsk_provided'
+                
+                manager = ProviderManager(
+                    api_keys={},
+                    interactive=True,
+                    selected_providers=['groq']  # Only groq selected
+                )
+                
+                # Should only have prompted for groq, not openai
+                calls = [c[0][0].lower() for c in mock_prompt.call_args_list]
+                assert 'groq' in calls
+                assert 'openai' not in calls
+    
+    def test_selected_provider_missing_key_non_interactive_error(self):
+        """Selected provider with missing key and non-interactive should raise error."""
+        with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
+            'openai': {
+                'chat': MagicMock(LINK='https://openai.com', validate_key=MagicMock(return_value=True))
+            }
+        }):
+            with pytest.raises(ValueError, match="API key required"):
+                ProviderManager(
+                    api_keys={},
+                    interactive=False,
+                    selected_providers=['openai']  # openai selected but no key
+                )
+    
+    def test_user_skips_selected_provider_in_interactive_raises_error(self):
+        """If user skips prompt for selected provider, should raise error."""
+        with patch('plotsense.core.providers.provider_manager.ProviderManager.SUPPORTED_PROVIDERS', {
+            'openai': {
+                'chat': MagicMock(LINK='https://openai.com', validate_key=MagicMock(return_value=True))
+            }
+        }):
+            with patch('plotsense.core.providers.provider_manager.prompt_for_api_key') as mock_prompt:
+                mock_prompt.return_value = None  # User skipped
+                
+                with pytest.raises(ValueError, match="API key required"):
+                    ProviderManager(
+                        api_keys={},
+                        interactive=True,
+                        selected_providers=['openai']  # openai required
+                    )

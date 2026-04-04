@@ -1,6 +1,7 @@
 from typing import List
 from anthropic import Anthropic
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class AnthropicProvider(LLMProvider):
@@ -42,15 +43,9 @@ class AnthropicProvider(LLMProvider):
             raise RuntimeError(f"Anthropic query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """
-        Return a list of supported Anthropic models.
-        This list can be expanded as new Claude versions are released.
-        """
-        return [
-            "claude-3-5-sonnet-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-haiku-20240307",
-        ]
+        """Return list of supported Anthropic models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("anthropic", "default")
 
     def validate_key(self) -> bool:
         """
