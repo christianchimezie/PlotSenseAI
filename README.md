@@ -5,7 +5,7 @@
 [![Python Tests](https://github.com/PlotSenseAI/PlotSenseAI/actions/workflows/python-tests.yml/badge.svg)](https://github.com/PlotSenseAI/PlotSenseAI/actions/workflows/python-tests.yml)
 [![Frontend Tests](https://github.com/PlotSenseAI/PlotSenseAI/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/PlotSenseAI/PlotSenseAI/actions/workflows/frontend-tests.yml)
 [![codecov](https://codecov.io/gh/PlotSenseAI/PlotSenseAI/branch/main/graph/badge.svg)](https://codecov.io/gh/PlotSenseAI/PlotSenseAI)
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Code style: flake8](https://img.shields.io/badge/code%20style-flake8-black.svg)](https://flake8.pycqa.org/)
 
