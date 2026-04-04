@@ -47,7 +47,7 @@ class GeminiProvider(LLMProvider):
                 ]
             else:
                 # Text-only
-                contents = prompt 
+                contents = prompt
 
             self._init_client()
             if not self.client:

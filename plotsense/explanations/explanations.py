@@ -8,6 +8,7 @@ from plotsense.core.ai_interface import AIModelInterface
 from plotsense.core.enums.strategy import StrategyName
 from plotsense.core.providers.provider_manager import ProviderManager
 from plotsense.core.utils import encode_image, save_plot_to_image
+from plotsense.exceptions import PlotSenseDataError
 
 load_dotenv()
 
@@ -26,10 +27,10 @@ class PlotExplainer:
         interactive: bool = True,
         timeout: int = 30,
     ):
-        self.timeout = timeout # timeout for API calls
-        self.max_iterations = max_iterations # max iterations for refinement
+        self.timeout = timeout  # timeout for API calls
+        self.max_iterations = max_iterations  # max iterations for refinement
         self.interactive = interactive
-        self.strategy_name = strategy # strategy for provider selection
+        self.strategy_name = strategy  # strategy for provider selection
 
         # selected_models is the source of truth for provider selection
         selected_providers = {p for p, _ in (selected_models or [])}
@@ -55,33 +56,33 @@ class PlotExplainer:
             # - ("openai_response", "gpt-4o-mini")
             expanded_selected = set()
             unsupported_models = {}  # Track which models aren't in registry
-            
+
             for vendor, model in selected_models:
                 # Check if vendor has variants (contains underscore in available_models)
                 vendor_variants = {
                     prov for prov, _ in self.available_models
                     if prov.startswith(vendor + "_") or prov == vendor
                 }
-                
+
                 if not vendor_variants:
                     # Vendor not available at all
                     raise ValueError(
                         f"Provider '{vendor}' is not initialized or has no available variants. "
                         f"Check that you have a valid API key for '{vendor}'."
                     )
-                
+
                 # Check if model is supported by this vendor
                 supported_models = {
-                    m for prov, m in self.available_models 
+                    m for prov, m in self.available_models
                     if prov.startswith(vendor + "_") or prov == vendor
                 }
-                
+
                 if model not in supported_models:
                     unsupported_models[vendor] = (model, sorted(supported_models))
-                
+
                 for variant in vendor_variants:
                     expanded_selected.add((variant, model))
-            
+
             # If any models are unsupported, raise clear error
             if unsupported_models:
                 error_lines = ["Unsupported model(s) requested:"]
@@ -92,7 +93,7 @@ class PlotExplainer:
                         + (f", ... ({len(supported)} total)" if len(supported) > 3 else "")
                     )
                 raise ValueError("\n".join(error_lines))
-            
+
             self.available_models = [
                 pair for pair in self.available_models if pair in expanded_selected
             ]
@@ -299,7 +300,7 @@ class PlotExplainer:
         return self._query_model(
             provider=provider,
             model=model,
-            prompt= refinement_prompt,
+            prompt=refinement_prompt,
             image_path=image_path,
             custom_parameters=custom_parameters
         )
@@ -317,6 +318,7 @@ class PlotExplainer:
             custom_parameters=custom_parameters
         )
 
+
 # Package-level convenience function
 _explainer_instance = None
 
@@ -324,7 +326,7 @@ _explainer_instance = None
 def explainer(
     plot_object: Union[Figure, Axes],
     prompt: str = "Explain this data visualization",
-    *, # force keyword args after this
+    *,  # force keyword args after this
 
     custom_parameters: Optional[Dict] = None,
     strategy: StrategyName = StrategyName.ROUND_ROBIN,
@@ -374,4 +376,3 @@ def explainer(
         custom_parameters=custom_parameters,
         temp_image_path=temp_image_path
     )
-

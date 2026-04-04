@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+
 class LLMProvider(ABC):
     """Abstract base class for LLM providers."""
 
@@ -22,4 +23,3 @@ class LLMProvider(ABC):
     @abstractmethod
     def validate_key(self) -> bool:
         pass
-

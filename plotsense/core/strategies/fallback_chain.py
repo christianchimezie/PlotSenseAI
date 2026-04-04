@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 from plotsense.core.strategies.strategy import Strategy
 
+
 class FallbackChainStrategy(Strategy):
     """Try providers/models in fixed order until one succeeds."""
 
