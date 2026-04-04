@@ -1,6 +1,7 @@
 from typing import List, Optional
 from openai import OpenAI
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class OpenAIResponseProvider(LLMProvider):
@@ -50,12 +51,9 @@ class OpenAIResponseProvider(LLMProvider):
             raise RuntimeError(f"OpenAI response query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """Return a curated list of supported OpenAI Response models."""
-        return [
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4o",
-        ]
+        """Return list of supported OpenAI response models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("openai", "response")
 
     def validate_key(self) -> bool:
         """

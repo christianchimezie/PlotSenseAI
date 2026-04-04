@@ -91,7 +91,7 @@ class TestInitialization:
 
     def test_missing_key_interactive(self, monkeypatch):
         """Test interactive key input"""
-        monkeypatch.setattr("builtins.input", lambda _: "typed_key")
+        monkeypatch.setattr("getpass.getpass", lambda _: "typed_key")
         r = VisualizationRecommender(api_keys={"groq": None}, interactive=True)
         assert r.api_keys["groq"] == "typed_key"
 

@@ -2,6 +2,7 @@ from typing import List
 from groq import Groq
 from groq.types.chat import ChatCompletionUserMessageParam
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class GroqProvider(LLMProvider):
@@ -50,11 +51,9 @@ class GroqProvider(LLMProvider):
             raise RuntimeError(f"Groq query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """Return a curated list of supported Groq models."""
-        return [
-            "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
-        ]
+        """Return list of supported Groq models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("groq", "default")
 
     def validate_key(self) -> bool:
         """

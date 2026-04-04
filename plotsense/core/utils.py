@@ -1,5 +1,6 @@
 import builtins
 import base64
+import getpass
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from typing import Optional, Union, cast
@@ -9,7 +10,20 @@ def prompt_for_api_key(
     service_name: str, service_link: str, interactive: bool = True,
     skip_if_missing: bool = False
 ) -> Optional[str]:
-    """Prompt user for API key or raise if unavailable."""
+    """Prompt user for API key.
+    
+    Args:
+        service_name: Name of the service/provider
+        service_link: Link to get the API key
+        interactive: Whether to prompt (vs raise immediately)
+        skip_if_missing: Whether pressing Enter without a value is allowed
+        
+    Returns:
+        API key string, or None if user skips and skip_if_missing=True
+        
+    Raises:
+        ValueError if key not provided and either not interactive or skip_if_missing=False
+    """
     if not interactive:
         if skip_if_missing:
             return None
@@ -22,7 +36,13 @@ def prompt_for_api_key(
     try:
         print(f"⚙️  {service_name.upper()} API key not found.")
         print(f"🔗  Get it at {service_link}")
-        key = builtins.input(f"Enter {service_name.upper()} API key (or press Enter to skip): ").strip()
+        if skip_if_missing:
+            prompt_text = f"Enter {service_name.upper()} API key (or press Enter to skip): "
+        else:
+            prompt_text = f"Enter {service_name.upper()} API key: "
+        # Use getpass to hide input (avoid key appearing in logs/terminal)
+        key = getpass.getpass(prompt_text).strip()
+        
         if not key and skip_if_missing:
             return None
         if not key:

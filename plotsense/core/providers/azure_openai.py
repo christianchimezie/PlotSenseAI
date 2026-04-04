@@ -3,6 +3,7 @@ from openai import OpenAI
 # AzureOpenAI,
 from openai.types.chat import ChatCompletionUserMessageParam
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class AzureOpenAIProvider(LLMProvider):
@@ -66,17 +67,9 @@ class AzureOpenAIProvider(LLMProvider):
             raise RuntimeError(f"Azure OpenAI query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """
-        Return a suggested list of Azure OpenAI deployable model names.
-        (These must match your deployment names in Azure.)
-        """
-        return [
-            "openai/gpt-5",
-            # "gpt-4o",
-            # "gpt-4-turbo",
-            # "gpt-35-turbo",
-            # "gpt-4",
-        ]
+        """Return list of supported Azure OpenAI models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("azure", "default")
 
     def validate_key(self) -> bool:
         """

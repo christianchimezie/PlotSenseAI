@@ -2,6 +2,7 @@ from typing import List
 from openai import OpenAI
 from openai.types.chat import ChatCompletionUserMessageParam
 from .base import LLMProvider
+from ..registry_loader import get_registry_loader
 
 
 class OllamaProvider(LLMProvider):
@@ -52,10 +53,9 @@ class OllamaProvider(LLMProvider):
             raise RuntimeError(f"Ollama query failed: {e}")
 
     def list_models(self) -> List[str]:
-        """
-        List of example models. In a real setup, this could query `ollama list`.
-        """
-        return ["llama3", "mistral", "codellama", "phi3", "neural-chat"]
+        """Return list of supported Ollama models from registry."""
+        registry = get_registry_loader()
+        return registry.get_provider_models("ollama", "default")
 
     def validate_key(self) -> bool:
         """

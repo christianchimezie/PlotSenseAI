@@ -9,6 +9,7 @@ import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import textwrap
 import builtins
+import getpass
 from pprint import pprint
 from groq import Groq
 from plotsense.exceptions import PlotSenseAPIError, PlotSenseDataError, PlotSenseConfigError
@@ -86,7 +87,8 @@ class VisualizationRecommender:
                             service, f"the {service.upper()} website")
                         message = (
                             f"Enter {service.upper()} API key (get it at {link}): ")
-                        self.api_keys[service] = builtins.input(
+                        # Use getpass to hide input (avoid key appearing in logs/terminal)
+                        self.api_keys[service] = getpass.getpass(
                             message).strip()
                         if not self.api_keys[service]:
                             raise PlotSenseDataError(

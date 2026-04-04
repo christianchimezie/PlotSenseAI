@@ -7,6 +7,7 @@ from plotsense.core.providers.gemini import GeminiProvider
 from plotsense.core.providers.ollama_openai import OllamaProvider
 from plotsense.core.providers.openai_chat import OpenAIChatProvider
 from plotsense.core.utils import prompt_for_api_key
+from plotsense.core.registry_loader import get_registry_loader
 from .groq import GroqProvider
 from .groq_openai import GroqOpenAIProvider
 from .openai_response import OpenAIResponseProvider
@@ -40,60 +41,78 @@ class ProviderManager:
 
     def __init__(
         self, api_keys: Dict[str, str], interactive: bool = True,
-        restrict_to: Optional[List[str]] = None
+        selected_providers: Optional[List[str]] = None
     ):
-        self.api_keys = api_keys or {}
+        """Initialize ProviderManager.
+        
+        Args:
+            api_keys: Dict of available API keys (intent: supply credentials only, not selection)
+            interactive: Whether to prompt for missing keys of selected providers
+            selected_providers: List of provider names to initialize (intent: determines which providers to use)
+        
+        Design principle:
+        - selected_providers determines WHICH providers to initialize
+        - api_keys only provides credentials (if available)
+        - Unselected providers are never initialized, validated, or prompted for
+        """
+        # Filter out None/empty values from api_keys to avoid treating them as "no credentials"
+        self.api_keys = {k: v for k, v in (api_keys or {}).items() if v} if api_keys else {}
         self.interactive = interactive
         self.providers = {}
-        self.restrict_to = set(restrict_to) if restrict_to else None
+        self.selected_providers = set(selected_providers) if selected_providers else None
 
-        # Normalize restrict_to list
-        if restrict_to:
-            invalid = [p for p in restrict_to if p not in self.SUPPORTED_PROVIDERS]
+        # Validate selected_providers list
+        if self.selected_providers:
+            invalid = [p for p in self.selected_providers if p not in self.SUPPORTED_PROVIDERS]
             if invalid:
                 raise ValueError(
                     f"Unsupported provider(s): {invalid}. "
                     f"Supported providers: {list(self.SUPPORTED_PROVIDERS.keys())}"
                 )
-            self.restrict_to = set(restrict_to)
-        else:
-            self.restrict_to = None
 
         self._init_providers()
 
     def _init_providers(self):
-        """Initialize providers that have API keys supplied.
+        """Initialize selected providers.
         
-        DESIGN PRINCIPLE: api_keys determines which providers are AVAILABLE for use.
-        Only initialize providers that have a key in api_keys.
-        Do NOT prompt for or validate providers that weren't explicitly provided.
+        DESIGN PRINCIPLE: selected_providers determines WHAT to initialize.
+        api_keys only provides credentials. Interactive prompting happens for selected
+        providers with missing keys.
         """
         # Determine which providers to initialize
-        # Start with providers that have keys in api_keys
-        providers_to_init = set(self.api_keys.keys())
-        
-        if self.restrict_to:
-            # If restrict_to is specified, ensure all requested providers have keys
-            missing_keys = self.restrict_to - providers_to_init
-            if missing_keys:
+        if self.selected_providers:
+            # User explicitly selected specific providers
+            providers_to_init = self.selected_providers
+        else:
+            # No selection: initialize all providers with available keys (fallback behavior)
+            providers_to_init = set(self.api_keys.keys())
+            if not providers_to_init:
                 raise ValueError(
-                    f"Selected models require provider(s) {missing_keys} but no API key(s) provided. "
-                    f"Supply their keys via api_keys dict."
+                    "No providers selected and no API keys provided. "
+                    "Pass selected_providers or provide api_keys."
                 )
-            providers_to_init = self.restrict_to
-        
-        # Only iterate through providers that we have keys for
+
+        # Initialize each selected provider
         for vendor_name in providers_to_init:
             if vendor_name not in self.SUPPORTED_PROVIDERS:
                 raise ValueError(f"Unknown provider: {vendor_name}")
-                
-            variants = self.SUPPORTED_PROVIDERS[vendor_name]
-            api_key = self.api_keys[vendor_name]
-            
-            if not isinstance(api_key, str) or not api_key.strip():
-                print(f"⚠️ Skipping {vendor_name.upper()} due to invalid API key format.")
-                continue
 
+            # Get API key: from api_keys dict, or prompt if missing and interactive
+            api_key = self.api_keys.get(vendor_name)
+            
+            if not api_key:
+                # Key missing: try to get it interactively
+                api_key = self._get_api_key_for_provider(vendor_name)
+                
+            if not api_key or not isinstance(api_key, str) or not api_key.strip():
+                # Still no key
+                raise ValueError(
+                    f"API key required for selected provider '{vendor_name}'. "
+                    f"Pass it via api_keys dict or provide it interactively."
+                )
+
+            # Initialize all variants for this provider
+            variants = self.SUPPORTED_PROVIDERS[vendor_name]
             for variant_name, provider_cls in variants.items():
                 full_name = f"{vendor_name}_{variant_name}"
                 link = getattr(provider_cls, "LINK", f"https://{vendor_name}.com")
@@ -108,6 +127,42 @@ class ProviderManager:
                         print(f"❌ {full_name.upper()} API key invalid or unverified.")
                 except Exception as e:
                     print(f"⚠️  Error validating {full_name.upper()} API key: {e}")
+
+    def _get_api_key_for_provider(self, vendor_name: str) -> Optional[str]:
+        """Get API key for a provider: from dict, or prompt if interactive.
+        
+        Args:
+            vendor_name: Name of the provider
+            
+        Returns:
+            API key string, or None if user skips in interactive mode
+            
+        Raises:
+            ValueError if key missing and not interactive
+        """
+        # Already have it
+        if vendor_name in self.api_keys:
+            return self.api_keys[vendor_name]
+        
+        if not self.interactive:
+            raise ValueError(
+                f"API key required for provider '{vendor_name}' but not provided. "
+                f"Pass it via api_keys dict or enable interactive mode."
+            )
+        
+        # Prompt interactively
+        provider_cls = self.SUPPORTED_PROVIDERS[vendor_name].get("default")
+        if not provider_cls:
+            # Fallback to first variant if no default
+            provider_cls = next(iter(self.SUPPORTED_PROVIDERS[vendor_name].values()))
+            
+        link = getattr(provider_cls, "LINK", f"https://{vendor_name}.com")
+        
+        return prompt_for_api_key(
+            vendor_name, link, 
+            interactive=self.interactive,
+            skip_if_missing=False  # For selected providers, skip is not allowed
+        )
 
 
     def get_provider(self, vendor_name: str, variant_name: str = ""):
@@ -187,64 +242,20 @@ class ProviderManager:
     def get_model_costs(self) -> Dict[str, float]:
         """
         Return a global map of model names to approximate per-request cost multipliers.
+        
+        Loads from registry, so updates don't require package release.
         This helps CostOptimizedStrategy prioritize cheaper models.
         """
-        # In a real system, this could come from provider-specific metadata
-        return {
-            # OpenAI
-            "gpt-4o-mini": 0.01,
-            "gpt-4o": 0.03,
-            "gpt-4-turbo": 0.025,
-            "gpt-3.5-turbo": 0.008,
-            # Groq (Llama)
-            "llama-3.1-8b-instant": 0.005,
-            "llama-3.3-70b-versatile": 0.02,
-            # Anthropic
-            "claude-3-haiku": 0.009,
-            "claude-3-sonnet": 0.02,
-            "claude-3-opus": 0.05,
-            # Gemini
-            "gemini-1.5-flash": 0.006,
-            "gemini-1.5-pro": 0.02,
-            # Azure (proxy to GPT costs)
-            "azure-gpt-4o-mini": 0.011,
-            "azure-gpt-4o": 0.031,
-            # Ollama (local = near-zero cost)
-            "llama3": 0.001,
-            "mistral": 0.002,
-        }
+        registry = get_registry_loader()
+        return registry.get_model_costs()
 
     def get_model_performance(self) -> Dict[str, float]:
         """
         Return approximate relative performance scores for each model.
+        
+        Loads from registry, so updates don't require package release.
         Higher means better performance (accuracy, reasoning ability, etc.).
         """
-        return {
-            # OpenAI
-            "gpt-4o": 10.0,
-            "gpt-4o-mini": 8.5,
-            "gpt-4-turbo": 9.5,
-            "gpt-3.5-turbo": 7.5,
-
-            # Anthropic
-            "claude-3-opus": 9.8,
-            "claude-3-sonnet": 9.0,
-            "claude-3-haiku": 7.0,
-
-            # Groq
-            "llama-3.3-70b-versatile": 8.8,
-            "llama-3.1-8b-instant": 6.5,
-
-            # Gemini
-            "gemini-1.5-pro": 9.3,
-            "gemini-1.5-flash": 7.8,
-
-            # Azure (maps to OpenAI)
-            "azure-gpt-4o": 9.8,
-            "azure-gpt-4o-mini": 8.3,
-
-            # Ollama (local models)
-            "mistral": 6.0,
-            "llama3": 6.8,
-        }
+        registry = get_registry_loader()
+        return registry.get_model_performance()
 
