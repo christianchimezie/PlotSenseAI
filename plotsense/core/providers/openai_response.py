@@ -72,4 +72,3 @@ class OpenAIResponseProvider(LLMProvider):
         except Exception as e:
             print(f"OpenAI Responses API key validation failed: {e}")
             return False
-

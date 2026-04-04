@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional
 
+
 class Strategy(ABC):
     """
     Base Strategy interface for selecting provider/model pairs.
@@ -27,4 +28,3 @@ class Strategy(ABC):
             (provider_name, model_name)
         """
         pass
-

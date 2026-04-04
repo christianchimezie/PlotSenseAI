@@ -8,6 +8,7 @@ MODEL_PERFORMANCE_MAP = {
     "llama-3.1-8b-instant": 6,
 }
 
+
 class PerformanceOptimizedStrategy(Strategy):
     """Prefer highest-performance models first."""
 

@@ -381,6 +381,39 @@ class SmartPlotGenerator(PlotGenerator):
 
         return fig
 
+    def _add_color_dimension(self, scatter_params: Dict, color_data, kwargs: Dict):
+        """Add color dimension to scatter plot."""
+        if pd.api.types.is_numeric_dtype(color_data):
+            scatter_params['c'] = color_data
+            kwargs.setdefault('cmap', 'viridis')
+        else:
+            scatter_params['c'] = pd.factorize(color_data)[0]
+            kwargs.setdefault('cmap', 'tab10')
+
+    def _add_size_dimension(self, scatter_params: Dict, size_data, size_scale: float):
+        """Add size dimension to scatter plot."""
+        if not pd.api.types.is_numeric_dtype(size_data):
+            raise ValueError("Size variable must be numeric")
+
+        sizes = np.abs(size_data)
+        sizes = (sizes - sizes.min()) / (sizes.max() - sizes.min() + 1e-8) * size_scale
+        scatter_params['s'] = sizes
+
+    def _build_scatter_title(self, variables: List[str]) -> str:
+        """Build title for scatter plot."""
+        title = f"Scatter: {variables[0]} vs {variables[1]}"
+        if len(variables) >= 3:
+            title += f" (colored by {variables[2]})"
+        if len(variables) == 4:
+            title += f" (sized by {variables[3]})"
+        return title
+
+    def _add_colorbar_if_needed(self, fig, scatter, variables: List[str]):
+        """Add colorbar to scatter plot if color variable is numeric."""
+        if len(variables) >= 3:
+            if pd.api.types.is_numeric_dtype(self.data[variables[2]]):
+                fig.colorbar(scatter, ax=fig.axes[-1], label=variables[2])
+
     def _create_scatter(self, variables: List[str],
                         size_scale: float = 100.0,
                         **kwargs) -> plt.Figure:
@@ -406,11 +439,10 @@ class SmartPlotGenerator(PlotGenerator):
             raise ValueError("Scatter supports maximum 4 variables (x, y, color, size)")
 
         # Check data types
-        for var in variables[:2]:  # x and y must be numeric
+        for var in variables[:2]:
             try:
                 is_numeric = np.issubdtype(self.data[var].dtype, np.number)
             except TypeError:
-                # Handle StringDtype and other pandas types that np.issubdtype can't parse
                 is_numeric = pd.api.types.is_numeric_dtype(self.data[var])
 
             if not is_numeric:
@@ -422,51 +454,38 @@ class SmartPlotGenerator(PlotGenerator):
             'y': self.data[variables[1]],
         }
 
-        # Handle color (3rd variable)
         if len(variables) >= 3:
-            color_data = self.data[variables[2]]
-            if pd.api.types.is_numeric_dtype(color_data):
-                # For numeric color data, use continuous colormap
-                scatter_params['c'] = color_data
-                kwargs.setdefault('cmap', 'viridis')
-            else:
-                # For categorical data, convert to numeric codes
-                scatter_params['c'] = pd.factorize(color_data)[0]
-                kwargs.setdefault('cmap', 'tab10')
+            self._add_color_dimension(scatter_params, self.data[variables[2]], kwargs)
 
-        # Handle size (4th variable)
         if len(variables) == 4:
-            size_data = self.data[variables[3]]
-            if not pd.api.types.is_numeric_dtype(size_data):
-                raise ValueError(f"Size variable '{variables[3]}' must be numeric")
+            self._add_size_dimension(scatter_params, self.data[variables[3]], size_scale)
 
-            # Normalize and scale sizes
-            sizes = np.abs(size_data)  # Ensure positive
-            sizes = (sizes - sizes.min()) / (sizes.max() - sizes.min() + 1e-8) * size_scale
-            scatter_params['s'] = sizes
-
-        # Apply any additional kwargs
         scatter_params.update(kwargs)
-
         scatter = ax.scatter(**scatter_params)
 
-        # Set labels and title
-        self._set_labels(ax, variables[:2])  # Assuming this sets x and y labels
-        title = f"Scatter: {variables[0]} vs {variables[1]}"
-        if len(variables) >= 3:
-            title += f" (colored by {variables[2]})"
-            # Add colorbar for continuous data
-            if pd.api.types.is_numeric_dtype(self.data[variables[2]]):
-                fig.colorbar(scatter, ax=ax, label=variables[2])
-        if len(variables) == 4:
-            title += f" (sized by {variables[3]})"
-        ax.set_title(title)
+        self._set_labels(ax, variables[:2])
+        ax.set_title(self._build_scatter_title(variables))
+        self._add_colorbar_if_needed(fig, scatter, variables)
 
         return fig
 
 
 # Global instance of the plot generator
 _plot_generator_instance = None
+
+
+def _extract_and_override_variables(suggestion_row: pd.Series, plot_kwargs: Dict) -> List[str]:
+    """Extract variables from suggestion and apply any plot_kwargs overrides."""
+    variables = [v.strip() for v in suggestion_row['variables'].split(',')]
+
+    if 'x' in plot_kwargs:
+        variables[0] = plot_kwargs.pop('x')
+    if 'y' in plot_kwargs and len(variables) > 1:
+        variables[1] = plot_kwargs.pop('y')
+    if 'z' in plot_kwargs and len(variables) > 2:
+        variables[2] = plot_kwargs.pop('z')
+
+    return variables
 
 
 def plotgen(
@@ -499,65 +518,31 @@ def plotgen(
     """
     global _plot_generator_instance
 
-    # Handle case where suggestion is a row from recommendations
     if isinstance(suggestion, pd.Series):
-        # Create a temporary single-row suggestions DataFrame
-        temp_df = pd.DataFrame([suggestion])
-        # Initialize the plot generator with this single suggestion
-        _plot_generator_instance = SmartPlotGenerator(df, temp_df)
+        _plot_generator_instance = SmartPlotGenerator(df, pd.DataFrame([suggestion]))
+        variables = _extract_and_override_variables(suggestion, plot_kwargs)
 
-        # Get the variables from the suggestion
-        variables = [v.strip() for v in suggestion['variables'].split(',')]
-
-        # Handle x, y, z arguments if provided
-        if 'x' in plot_kwargs:
-            variables[0] = plot_kwargs.pop('x')
-        if 'y' in plot_kwargs and len(variables) > 1:
-            variables[1] = plot_kwargs.pop('y')
-        if 'z' in plot_kwargs and len(variables) > 2:
-            variables[2] = plot_kwargs.pop('z')
-
-        # Create a new suggestion with updated variables
         updated_suggestion = suggestion.copy()
         updated_suggestion['variables'] = ','.join(variables)
-        temp_df = pd.DataFrame([updated_suggestion])
-        _plot_generator_instance.suggestions = temp_df
+        _plot_generator_instance.suggestions = pd.DataFrame([updated_suggestion])
 
-        # Generate the plot
         return _plot_generator_instance.generate_plot(0, **plot_kwargs)
 
-    # Handle case where suggestion is an index
     elif isinstance(suggestion, int):
         if suggestions_df is None:
             raise ValueError("suggestions_df must be provided when using an index")
 
-        # Initialize the plot generator if it doesn't exist
         if _plot_generator_instance is None:
             _plot_generator_instance = SmartPlotGenerator(df, suggestions_df)
-        else:
-            # Update the data if the generator exists but the data changed
-            if not _plot_generator_instance.data.equals(df):
-                _plot_generator_instance.data = df
+        elif not _plot_generator_instance.data.equals(df):
+            _plot_generator_instance.data = df
 
-        # Get the variables from the suggestion
         suggestion_row = suggestions_df.iloc[suggestion]
-        variables = [v.strip() for v in suggestion_row['variables'].split(',')]
+        variables = _extract_and_override_variables(suggestion_row, plot_kwargs)
 
-        # Handle x, y, z arguments if provided
-        if 'x' in plot_kwargs:
-            variables[0] = plot_kwargs.pop('x')
-        if 'y' in plot_kwargs and len(variables) > 1:
-            variables[1] = plot_kwargs.pop('y')
-        if 'z' in plot_kwargs and len(variables) > 2:
-            variables[2] = plot_kwargs.pop('z')
-
-        # Create a new suggestion with updated variables
         updated_suggestion = suggestion_row.copy()
         updated_suggestion['variables'] = ','.join(variables)
         suggestions_df.iloc[suggestion] = updated_suggestion
         _plot_generator_instance.suggestions = suggestions_df
 
-        # Generate the plot
         return _plot_generator_instance.generate_plot(suggestion, **plot_kwargs)
-    # else:
-    #     raise TypeError("suggestion must be either an integer index or a pandas Series")

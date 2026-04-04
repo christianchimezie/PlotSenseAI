@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 from plotsense.core.strategies.strategy import Strategy
 
+
 class RoundRobinStrategy(Strategy):
     """Cycle through all models evenly."""
 

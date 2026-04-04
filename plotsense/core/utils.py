@@ -1,4 +1,3 @@
-import builtins
 import base64
 import getpass
 from matplotlib.figure import Figure
@@ -11,16 +10,16 @@ def prompt_for_api_key(
     skip_if_missing: bool = False
 ) -> Optional[str]:
     """Prompt user for API key.
-    
+
     Args:
         service_name: Name of the service/provider
         service_link: Link to get the API key
         interactive: Whether to prompt (vs raise immediately)
         skip_if_missing: Whether pressing Enter without a value is allowed
-        
+
     Returns:
         API key string, or None if user skips and skip_if_missing=True
-        
+
     Raises:
         ValueError if key not provided and either not interactive or skip_if_missing=False
     """
@@ -42,7 +41,7 @@ def prompt_for_api_key(
             prompt_text = f"Enter {service_name.upper()} API key: "
         # Use getpass to hide input (avoid key appearing in logs/terminal)
         key = getpass.getpass(prompt_text).strip()
-        
+
         if not key and skip_if_missing:
             return None
         if not key:
@@ -52,6 +51,7 @@ def prompt_for_api_key(
         if skip_if_missing:
             return None
         raise ValueError(f"{service_name.upper()} API key is required (get it at {service_link})")
+
 
 def save_plot_to_image(
     plot_object: Union[Figure, Axes],
@@ -72,4 +72,3 @@ def encode_image(image_path: str) -> str:
     """Encode image file to base64 string."""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
-
