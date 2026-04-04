@@ -9,16 +9,14 @@
           "displayName": "Groq (Native API)",
           "models": [
             "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
-            "mixtral-8x7b-32768"
+            "llama-3.3-70b-versatile"
           ]
         },
         "openai": {
           "displayName": "Groq (OpenAI-Compatible)",
           "models": [
             "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
-            "mixtral-8x7b-32768"
+            "llama-3.3-70b-versatile"
           ]
         }
       }
